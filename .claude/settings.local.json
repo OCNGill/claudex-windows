@@ -40,7 +40,9 @@
       "Bash(yarn workspace:*)",
       "Bash(env FIRESTORE_EMULATOR_HOST=localhost:8080 FIREBASE_AUTH_EMULATOR_HOST=localhost:9099 yarn test:*)",
       "Bash(gh pr list:*)",
-      "Bash(gh pr view:*)"
+      "Bash(gh pr view:*)",
+      "Bash(npm run build:*)",
+      "Read(//Users/maikel/Workspace/Pelago/bmad/**)"
     ],
     "deny": [],
     "ask": []
