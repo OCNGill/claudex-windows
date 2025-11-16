@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"time"
+	// "time" // Temporarily commented out while BMad output rule is disabled
 )
 
 const (
@@ -75,72 +75,83 @@ func SetupPatterns(interceptor *Interceptor) error {
 	// OUTPUT RULES - Checked continuously on Claude's output
 
 	// Rule 4: Detect when /BMad:agents:dev is running and interrupt it
-	err = interceptor.AddOutputRule(`/BMad:agents:dev is running`, func(input string, writer io.Writer) bool {
-		if interceptor.GetLogFile() != nil {
-			fmt.Fprintf(interceptor.GetLogFile(), "\n========== BMAD OUTPUT INTERCEPTION START ==========\n")
-			fmt.Fprintf(interceptor.GetLogFile(), "[CLAUDEX] Detected '/BMad:agents:dev is running' in output\n")
-		}
-
-		ptyWriter := interceptor.GetPtyWriter()
-		if ptyWriter == nil {
+	// TEMPORARILY DISABLED FOR DEBUGGING
+	/*
+		err = interceptor.AddOutputRule(`/BMad:agents:dev is running`, func(input string, writer io.Writer) bool {
 			if interceptor.GetLogFile() != nil {
-				fmt.Fprintf(interceptor.GetLogFile(), "[CLAUDEX ERROR] PTY writer not available!\n")
-				fmt.Fprintf(interceptor.GetLogFile(), "========== BMAD OUTPUT INTERCEPTION FAILED ==========\n\n")
+				fmt.Fprintf(interceptor.GetLogFile(), "\n========== BMAD OUTPUT INTERCEPTION START ==========\n")
+				fmt.Fprintf(interceptor.GetLogFile(), "[CLAUDEX] Detected '/BMad:agents:dev is running' in output\n")
 			}
-			return false
-		}
 
-		// Send ESC to interrupt Claude (0x1B is the ESC byte)
-		if interceptor.GetLogFile() != nil {
-			fmt.Fprintf(interceptor.GetLogFile(), "[CLAUDEX] Step 1: Sending ESC (byte 0x1B) to interrupt Claude\n")
-		}
-		n, err := ptyWriter.Write([]byte{0x1B})
-		if interceptor.GetLogFile() != nil {
-			fmt.Fprintf(interceptor.GetLogFile(), "[CLAUDEX] ESC sent: wrote %d bytes, error: %v\n", n, err)
-		}
+			ptyWriter := interceptor.GetPtyWriter()
+			if ptyWriter == nil {
+				if interceptor.GetLogFile() != nil {
+					fmt.Fprintf(interceptor.GetLogFile(), "[CLAUDEX ERROR] PTY writer not available!\n")
+					fmt.Fprintf(interceptor.GetLogFile(), "========== BMAD OUTPUT INTERCEPTION FAILED ==========\n\n")
+				}
+				return false
+			}
 
-		// Wait for Claude to process the interrupt
-		if interceptor.GetLogFile() != nil {
-			fmt.Fprintf(interceptor.GetLogFile(), "[CLAUDEX] Waiting 100ms for interrupt to take effect...\n")
-		}
-		time.Sleep(100 * time.Millisecond)
+			// Send ESC to interrupt Claude (0x1B is the ESC byte)
+			if interceptor.GetLogFile() != nil {
+				fmt.Fprintf(interceptor.GetLogFile(), "[CLAUDEX] Step 1: Sending ESC (byte 0x1B) to interrupt Claude\n")
+			}
+			n, err := ptyWriter.Write([]byte{0x1B})
+			if interceptor.GetLogFile() != nil {
+				fmt.Fprintf(interceptor.GetLogFile(), "[CLAUDEX] ESC sent: wrote %d bytes, error: %v\n", n, err)
+			}
 
-		// Now send the modified command (without Enter first)
-		modifiedCommand := "/BMad:agents:dev with custom text"
+			// Wait for Claude to process the interrupt and return to prompt
+			if interceptor.GetLogFile() != nil {
+				fmt.Fprintf(interceptor.GetLogFile(), "[CLAUDEX] Waiting 200ms for interrupt to take effect...\n")
+			}
+			time.Sleep(200 * time.Millisecond)
 
-		if interceptor.GetLogFile() != nil {
-			fmt.Fprintf(interceptor.GetLogFile(), "[CLAUDEX] Step 2: Typing modified command: '%s'\n", modifiedCommand)
-		}
-		n, err = ptyWriter.Write([]byte(modifiedCommand))
-		if interceptor.GetLogFile() != nil {
-			fmt.Fprintf(interceptor.GetLogFile(), "[CLAUDEX] Command text sent: wrote %d bytes, error: %v\n", n, err)
-		}
+			// Send the modified command character by character (simulating typing)
+			modifiedCommand := "/BMad:agents:dev with custom text"
 
-		// Wait a bit for the text to appear
-		if interceptor.GetLogFile() != nil {
-			fmt.Fprintf(interceptor.GetLogFile(), "[CLAUDEX] Waiting 50ms before sending Enter...\n")
-		}
-		time.Sleep(50 * time.Millisecond)
+			if interceptor.GetLogFile() != nil {
+				fmt.Fprintf(interceptor.GetLogFile(), "[CLAUDEX] Step 2: Typing modified command character by character: '%s'\n", modifiedCommand)
+			}
 
-		// Now send Enter
-		if interceptor.GetLogFile() != nil {
-			fmt.Fprintf(interceptor.GetLogFile(), "[CLAUDEX] Step 3: Sending Enter (\\r)\n")
-		}
-		n, err = ptyWriter.Write([]byte{0x0D}) // \r is 0x0D (carriage return)
-		if interceptor.GetLogFile() != nil {
-			fmt.Fprintf(interceptor.GetLogFile(), "[CLAUDEX] Enter sent: wrote %d bytes, error: %v\n", n, err)
-		}
+			for i, char := range modifiedCommand {
+				ptyWriter.Write([]byte{byte(char)})
+				// Small delay between characters to simulate human typing
+				if i < len(modifiedCommand)-1 {
+					time.Sleep(5 * time.Millisecond)
+				}
+			}
 
-		if interceptor.GetLogFile() != nil {
-			fmt.Fprintf(interceptor.GetLogFile(), "[CLAUDEX] Interception complete!\n")
-			fmt.Fprintf(interceptor.GetLogFile(), "========== BMAD OUTPUT INTERCEPTION END ==========\n\n")
-		}
+			if interceptor.GetLogFile() != nil {
+				fmt.Fprintf(interceptor.GetLogFile(), "[CLAUDEX] Command text typed character by character\n")
+			}
 
-		return false // Don't block output, we want to see what happens
-	})
-	if err != nil {
-		return err
-	}
+			// Wait a bit longer for the text to be processed
+			if interceptor.GetLogFile() != nil {
+				fmt.Fprintf(interceptor.GetLogFile(), "[CLAUDEX] Waiting 300ms before sending Enter...\n")
+			}
+			time.Sleep(300 * time.Millisecond)
+
+			// Send Enter once
+			if interceptor.GetLogFile() != nil {
+				fmt.Fprintf(interceptor.GetLogFile(), "[CLAUDEX] Step 3: Sending Enter byte 13 (0x0D = \\r)\n")
+			}
+			n, err = ptyWriter.Write([]byte{13}) // byte 13 = 0x0D = \r
+			if interceptor.GetLogFile() != nil {
+				fmt.Fprintf(interceptor.GetLogFile(), "[CLAUDEX] Enter sent: wrote %d bytes, error: %v\n", n, err)
+			}
+
+			if interceptor.GetLogFile() != nil {
+				fmt.Fprintf(interceptor.GetLogFile(), "[CLAUDEX] Interception complete!\n")
+				fmt.Fprintf(interceptor.GetLogFile(), "========== BMAD OUTPUT INTERCEPTION END ==========\n\n")
+			}
+
+			return false // Don't block output, we want to see what happens
+		})
+		if err != nil {
+			return err
+		}
+	*/
 
 	// Rule 5: Detect "hello world" in output
 	err = interceptor.AddOutputRule(`(?i)hello world`, func(input string, writer io.Writer) bool {

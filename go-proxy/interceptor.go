@@ -132,6 +132,17 @@ func (i *Interceptor) HandleInput(src io.Reader, dst io.Writer) error {
 			// Store the ENTER byte for pattern rules to use
 			i.lastEnterByte = b
 
+			// DETAILED LOGGING: Capture exact Enter byte details
+			if i.logFile != nil {
+				fmt.Fprintf(i.logFile, "\n========== ENTER KEY DETECTED ==========\n")
+				fmt.Fprintf(i.logFile, "[ENTER] Byte value: %d (0x%02X)\n", b, b)
+				fmt.Fprintf(i.logFile, "[ENTER] Char representation: %q\n", char)
+				fmt.Fprintf(i.logFile, "[ENTER] Buffer contents: %v\n", buf[:n])
+				fmt.Fprintf(i.logFile, "[ENTER] Buffer hex: % X\n", buf[:n])
+				fmt.Fprintf(i.logFile, "[ENTER] n (bytes read): %d\n", n)
+				fmt.Fprintf(i.logFile, "========================================\n\n")
+			}
+
 			// Get the accumulated input
 			inputStr := i.inputBuffer.String()
 			trimmedInput := strings.TrimSpace(inputStr)
@@ -159,7 +170,17 @@ func (i *Interceptor) HandleInput(src io.Reader, dst io.Writer) error {
 
 					// If not blocked, forward the Enter key
 					if !shouldBlock {
-						if _, err := dst.Write(buf[:n]); err != nil {
+						if i.logFile != nil {
+							fmt.Fprintf(i.logFile, "[ENTER FORWARD] About to forward Enter\n")
+							fmt.Fprintf(i.logFile, "[ENTER FORWARD] Buffer being sent: %v\n", buf[:n])
+							fmt.Fprintf(i.logFile, "[ENTER FORWARD] Buffer hex: % X\n", buf[:n])
+							fmt.Fprintf(i.logFile, "[ENTER FORWARD] Length: %d bytes\n", n)
+						}
+						bytesWritten, err := dst.Write(buf[:n])
+						if i.logFile != nil {
+							fmt.Fprintf(i.logFile, "[ENTER FORWARD] Bytes written: %d, error: %v\n\n", bytesWritten, err)
+						}
+						if err != nil {
 							return err
 						}
 					}
