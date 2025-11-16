@@ -17,12 +17,15 @@ const (
 func SetupPatterns(interceptor *Interceptor) error {
 	// INPUT RULES - Only checked when user presses ENTER
 
-	// Rule 1: Block "hello" pattern in user input
+	// Rule 1: Append custom text to "hello" pattern in user input
 	err := interceptor.AddInputRule(`(?i)hello`, func(input string, writer io.Writer) bool {
-		customMessage := fmt.Sprintf("\n%s[Claudex]%s %s🎉 Hello detected - command blocked!%s\n\n",
-			colorYellow, colorReset, colorCyan, colorReset)
-		os.Stdout.WriteString(customMessage)
-		return true // Block - don't send ENTER to Claude
+		// Append the custom text before ENTER is sent
+		appendedText := ", this is a custom text"
+		writer.Write([]byte(appendedText))
+
+		// Return false to let the original ENTER go through
+		// This submits the complete message: "hello, this is a custom text"
+		return false
 	})
 	if err != nil {
 		return err

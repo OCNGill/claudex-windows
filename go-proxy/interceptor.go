@@ -26,6 +26,7 @@ type Interceptor struct {
 	inputRules    []PatternRule // Rules checked on ENTER
 	outputRules   []PatternRule // Rules checked continuously on output
 	inEscapeSeq   bool // Track if we're in the middle of an ANSI escape sequence
+	lastEnterByte byte // Store the last ENTER byte pressed (for replaying)
 }
 
 // NewInterceptor creates a new interceptor
@@ -37,6 +38,11 @@ func NewInterceptor(logFile *os.File) *Interceptor {
 		inputRules:   make([]PatternRule, 0),
 		outputRules:  make([]PatternRule, 0),
 	}
+}
+
+// GetLastEnterByte returns the last ENTER byte that was pressed
+func (i *Interceptor) GetLastEnterByte() byte {
+	return i.lastEnterByte
 }
 
 // AddInputRule adds a pattern matching rule for user input (checked on ENTER)
@@ -107,6 +113,9 @@ func (i *Interceptor) HandleInput(src io.Reader, dst io.Writer) error {
 
 		// Check for Enter key (newline or carriage return) - only when NOT in escape seq
 		if char == "\r" || char == "\n" {
+			// Store the ENTER byte for pattern rules to use
+			i.lastEnterByte = b
+
 			// Get the accumulated input
 			inputStr := i.inputBuffer.String()
 			trimmedInput := strings.TrimSpace(inputStr)
@@ -121,6 +130,7 @@ func (i *Interceptor) HandleInput(src io.Reader, dst io.Writer) error {
 			for _, rule := range i.inputRules {
 				if rule.Pattern.MatchString(trimmedInput) {
 					// Execute the action (it will handle its own output)
+					// Pass the interceptor so actions can access lastEnterByte
 					shouldBlock := rule.Action(trimmedInput, dst)
 
 					if i.logFile != nil {
