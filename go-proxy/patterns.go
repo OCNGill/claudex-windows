@@ -19,12 +19,17 @@ func SetupPatterns(interceptor *Interceptor) error {
 
 	// Rule 1: Append custom text to "hello" pattern in user input
 	err := interceptor.AddInputRule(`(?i)hello`, func(input string, writer io.Writer) bool {
-		// Append the custom text before ENTER is sent
-		appendedText := ", this is a custom text"
-		writer.Write([]byte(appendedText))
+		// Clear the typed "hello" by sending backspaces
+		inputLen := len(input)
+		for i := 0; i < inputLen; i++ {
+			writer.Write([]byte{0x08}) // Send backspace (Ctrl-H)
+		}
+
+		// Now type the complete message with appended text
+		completeMessage := input + ", this is a custom text"
+		writer.Write([]byte(completeMessage))
 
 		// Return false to let the original ENTER go through
-		// This submits the complete message: "hello, this is a custom text"
 		return false
 	})
 	if err != nil {
@@ -35,8 +40,8 @@ func SetupPatterns(interceptor *Interceptor) error {
 	err = interceptor.AddInputRule(`(?i)goodbye`, func(input string, writer io.Writer) bool {
 		customMessage := fmt.Sprintf("\n%s[Claudex]%s %sIntercepted \"goodbye\" - sending different message to Claude...%s\n",
 			colorYellow, colorReset, colorGreen, colorReset)
-		// Write to stdout for user notification
-		os.Stdout.WriteString(customMessage)
+		// Write to stderr for user notification
+		os.Stderr.WriteString(customMessage)
 
 		// Send the replacement message to Claude via PTY
 		replacementMessage := "the test we are doing is working\r"
@@ -54,7 +59,7 @@ func SetupPatterns(interceptor *Interceptor) error {
 	err = interceptor.AddOutputRule(`(?i)hello world`, func(input string, writer io.Writer) bool {
 		customMessage := fmt.Sprintf("\n%s[Claudex]%s %s🎉 Hello World detected in OUTPUT!%s\n",
 			colorYellow, colorReset, colorCyan, colorReset)
-		os.Stdout.WriteString(customMessage)
+		os.Stderr.WriteString(customMessage)
 		return false // Don't block, just notify
 	})
 	if err != nil {

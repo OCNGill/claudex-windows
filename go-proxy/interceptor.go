@@ -25,8 +25,8 @@ type Interceptor struct {
 	outputBuffer  *bytes.Buffer
 	inputRules    []PatternRule // Rules checked on ENTER
 	outputRules   []PatternRule // Rules checked continuously on output
-	inEscapeSeq   bool // Track if we're in the middle of an ANSI escape sequence
-	lastEnterByte byte // Store the last ENTER byte pressed (for replaying)
+	inEscapeSeq   bool          // Track if we're in the middle of an ANSI escape sequence
+	lastEnterByte byte          // Store the last ENTER byte pressed (for replaying)
 }
 
 // NewInterceptor creates a new interceptor
@@ -130,14 +130,21 @@ func (i *Interceptor) HandleInput(src io.Reader, dst io.Writer) error {
 			for _, rule := range i.inputRules {
 				if rule.Pattern.MatchString(trimmedInput) {
 					// Execute the action (it will handle its own output)
-					// Pass the interceptor so actions can access lastEnterByte
 					shouldBlock := rule.Action(trimmedInput, dst)
 
 					if i.logFile != nil {
 						if shouldBlock {
 							fmt.Fprintf(i.logFile, "[CLAUDEX BLOCKED] Pattern matched: %s\n", rule.Pattern.String())
 						} else {
-							fmt.Fprintf(i.logFile, "[CLAUDEX INTERCEPTED] Pattern matched: %s\n", rule.Pattern.String())
+							fmt.Fprintf(i.logFile, "[CLAUDEX INTERCEPTED] Pattern matched: %s (shouldForwardEnter=%v, byte=%d)\n",
+								rule.Pattern.String(), !shouldBlock, b)
+						}
+					}
+
+					// If not blocked, forward the Enter key
+					if !shouldBlock {
+						if _, err := dst.Write(buf[:n]); err != nil {
+							return err
 						}
 					}
 
@@ -200,7 +207,7 @@ func (i *Interceptor) HandleOutput(src io.Reader, dst io.Writer) error {
 			if rule.Pattern.MatchString(outputStr) {
 				// Execute action for output patterns
 				rule.Action(outputStr, dst)
-				
+
 				if i.logFile != nil {
 					fmt.Fprintf(i.logFile, "\n[CLAUDEX OUTPUT] Pattern detected: %s\n", rule.Pattern.String())
 				}
@@ -222,4 +229,3 @@ func (i *Interceptor) HandleOutput(src io.Reader, dst io.Writer) error {
 		}
 	}
 }
-
