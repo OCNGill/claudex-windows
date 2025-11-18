@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go build:*)"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "hooks": {
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/maikel/Workspace/Pelago/bmad/.claude/hooks/session-end.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

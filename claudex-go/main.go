@@ -15,6 +15,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/google/uuid"
 )
 
 func main() {
@@ -98,6 +99,7 @@ func main() {
 
 	// Handle "Create New Session" - select profile first
 	var profileContent []byte
+	var newSessionProfileContent []byte
 	if fm.choice == "new" {
 		// First, select a profile
 		profiles, err := getProfiles(profilesDir)
@@ -161,7 +163,8 @@ func main() {
 		}
 		fm.sessionName = sessionName
 		fm.sessionPath = sessionPath
-		fm.choice = claudeSessionID // Store session ID for later use
+		fm.choice = claudeSessionID              // Store session ID for later use
+		newSessionProfileContent = profileContent // Store profile content for launching
 	}
 
 	// Check if selected session has a Claude session ID (for resume/fork choice)
@@ -234,7 +237,7 @@ func main() {
 	}
 
 	if isNewSessionAlreadyInitialized {
-		// New session already initialized in parallel, just resume it
+		// New session created, launch it with --session-id
 		// Update last used timestamp
 		if err := updateLastUsed(fm.sessionPath); err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: Could not update last used timestamp: %v\n", err)
@@ -250,16 +253,16 @@ func main() {
 		fmt.Printf("📦 Session: %s\n", fm.sessionName)
 		fmt.Printf("🔄 Session ID: %s\n\n", claudeSessionID)
 
-		// Small delay before resuming
+		// Small delay before launching
 		time.Sleep(300 * time.Millisecond)
 
-		// Resume the Claude session interactively with activation files
-		resumeCmd := exec.Command("claude", "--resume", claudeSessionID, "load activation files")
-		resumeCmd.Stdin = os.Stdin
-		resumeCmd.Stdout = os.Stdout
-		resumeCmd.Stderr = os.Stderr
+		// Launch the Claude session with --session-id and system prompt
+		launchCmd := exec.Command("claude", "--session-id", claudeSessionID, "--system-prompt", string(newSessionProfileContent), "load activation files")
+		launchCmd.Stdin = os.Stdin
+		launchCmd.Stdout = os.Stdout
+		launchCmd.Stderr = os.Stderr
 
-		if err := resumeCmd.Run(); err != nil {
+		if err := launchCmd.Run(); err != nil {
 			fmt.Fprintf(os.Stderr, "\n❌ Error running Claude session: %v\n", err)
 			os.Exit(1)
 		}
@@ -433,41 +436,10 @@ func createNewSessionParallel(sessionsDir string, profileContent []byte) (string
 	fmt.Println("\033[1;36m Create New Session \033[0m")
 	fmt.Println()
 
-	// Channel to receive Claude session ID from goroutine
-	type sessionIDResult struct {
-		sessionID string
-		err       error
-	}
-	sessionIDChan := make(chan sessionIDResult, 1)
+	// Generate UUID for the session upfront
+	claudeSessionID := uuid.New().String()
 
-	// Start Claude session initialization in background (silently)
-	go func() {
-		initCmd := exec.Command("claude", "--system-prompt", string(profileContent), "-p", "hello", "--output-format", "json")
-		initCmd.Stderr = os.Stderr
-
-		output, err := initCmd.Output()
-		if err != nil {
-			sessionIDChan <- sessionIDResult{"", fmt.Errorf("error initializing Claude session: %w", err)}
-			return
-		}
-
-		var sessionData struct {
-			SessionID string `json:"session_id"`
-		}
-		if err := json.Unmarshal(output, &sessionData); err != nil {
-			sessionIDChan <- sessionIDResult{"", fmt.Errorf("error parsing session data: %w", err)}
-			return
-		}
-
-		if sessionData.SessionID == "" {
-			sessionIDChan <- sessionIDResult{"", fmt.Errorf("no session ID returned from Claude")}
-			return
-		}
-
-		sessionIDChan <- sessionIDResult{sessionData.SessionID, nil}
-	}()
-
-	// Meanwhile, get description from user
+	// Get description from user
 	fmt.Print("  Description: ")
 	reader := bufio.NewReader(os.Stdin)
 	description, err := reader.ReadString('\n')
@@ -487,13 +459,6 @@ func createNewSessionParallel(sessionsDir string, profileContent []byte) (string
 	if err != nil {
 		sessionName = createManualSlug(description)
 	}
-
-	// Wait for Claude session ID (silently)
-	result := <-sessionIDChan
-	if result.err != nil {
-		return "", "", "", result.err
-	}
-	claudeSessionID := result.sessionID
 
 	// Create final session name with Claude session ID
 	baseSessionName := sessionName
