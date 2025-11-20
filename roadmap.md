@@ -85,21 +85,23 @@ Execute `claude` directly in the session directory to give it focused access to 
 ### Context Management & Hooks (Native)
 *Leveraging Claude Code's built-in hooks functionality.*
 
-- [ ] **Native Hooks Configuration**:
-  - [ ] `PreToolUse` / `PostToolUse` hooks
-  - [ ] `SessionStart` / `SessionEnd` hooks
+- [x] **Native Hooks Configuration**:
+  - [x] `PreToolUse` / `PostToolUse` hooks (`inject-session-context.sh`, `subagent-stop.sh`)
+  - [x] `SessionStart` / `SessionEnd` hooks (`session-end.sh`)
 - [ ] **Prompt Interception & Enhancement**:
-  - [ ] **`PreToolUse` for Task tool**: Intercept subagent spawning to modify prompts
-  - [ ] **Dynamic Context Injection**: Auto-inject relevant docs/context based on subagent_type
+  - [x] **`PreToolUse` for Task tool**: Intercept subagent spawning to modify prompts
+  - [x] **Dynamic Context Injection**: Auto-inject relevant docs/context based on subagent_type
   - [ ] **Prompt Templates**: Apply agent-specific prompt enhancements before execution
   - [ ] **Validation Layer**: Enforce prompt structure/requirements before spawning
 - [ ] **Context Refresh**:
   - [ ] **`/reload-context`**: Refresh session context without losing state.
-  - [ ] **`/exit` hook**: Summarize session upon exit.
-- [ ] **Automatic Documentation Updates**:
-  - [ ] **`PostToolUse` hook**: Background process triggered after every tool execution
-  - [ ] Captures tool execution output to keep session documentation current
-  - [ ] Ensures documentation stays synchronized with session progress
+  - [x] **`/exit` hook**: Summarize session upon exit (`session-end.sh`).
+- [x] **Automatic Documentation Updates**:
+  - [x] **`PostToolUse` hook**: Background process triggered after every tool execution (`subagent-stop.sh`)
+  - [x] Captures tool execution output to keep session documentation current
+  - [x] Ensures documentation stays synchronized with session progress
+  - [x] **Non-blocking Execution**: Runs in background with recursion guards
+  - [x] **Smart Merging**: Appends/merges info instead of overwriting
 - [ ] **Automatic Execution Plan Tracking** *(Needs Discovery)*:
   - [ ] Background process to keep execution plan documents up-to-date
   - [ ] Track multi-phase plans (Phase 1, Phase 2, etc.) with task checklists
