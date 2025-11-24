@@ -58,7 +58,10 @@
       "Bash(npm test:*)",
       "Bash(npm run check:types:*)",
       "Bash(tree:*)",
-      "Bash(bq query:*)"
+      "Bash(bq query:*)",
+      "Bash(chmod:*)",
+      "mcp__plugin_mcp-notion_notion__notion-search",
+      "mcp__plugin_mcp-notion_notion__notion-fetch"
     ],
     "deny": [],
     "ask": []

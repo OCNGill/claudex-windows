@@ -3,6 +3,7 @@
 ## Task Status
 
 ### 🚀 In Progress
+- [ ] **Team Lead Activation Fix**: Restrict Team Lead activation to read ONLY session folder files (prevent codebase search).
 - [ ] **Dynamic Profiles ("Custom")**:
   - [ ] Generate agent definition dynamically based on user description
 
