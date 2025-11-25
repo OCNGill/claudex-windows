@@ -16,3 +16,4 @@ To Do:
   - Improve researcher profile to generate more concise documentation
   - Improve architect profile to generate more concise documentation
   - Find a solution to allow the user to define where the relevant documentation is located (product, architecture, standards, etc)
+  - Review all agents to adjust their output format to make sure they provide enough context to the caller (team lead) but avoid verbose responses
