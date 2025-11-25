@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"embed"
-	"encoding/json"
 	"fmt"
 	"io/fs"
 	"log"
@@ -119,10 +118,10 @@ func main() {
 		log.SetOutput(logFile)
 		log.SetPrefix("[claudex] ")
 		log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
-		
+
 		// Set environment variable for hooks
 		os.Setenv("CLAUDEX_LOG_FILE", logFilePath)
-		
+
 		log.Printf("Claudex started (log file: %s)", logFileName)
 	}
 
@@ -191,7 +190,6 @@ func main() {
 
 	// Handle "Create New Session" - select profile first
 	var profileContent []byte
-	var newSessionProfileContent []byte
 	if fm.choice == "new" {
 		// First, select a profile
 		profiles, err := getProfiles()
@@ -255,8 +253,7 @@ func main() {
 		}
 		fm.sessionName = sessionName
 		fm.sessionPath = sessionPath
-		fm.choice = claudeSessionID               // Store session ID for later use
-		newSessionProfileContent = profileContent // Store profile content for launching
+		fm.choice = claudeSessionID // Store session ID for later use
 	}
 
 	// Check if selected session has a Claude session ID (for resume/fork choice)
@@ -301,7 +298,7 @@ func main() {
 
 		// Handle fork choice
 		if resumeOrForkChoice == "fork" {
-			newSessionName, newSessionPath, err := forkSession(sessionsDir, fm.sessionName)
+			newSessionName, newSessionPath, newClaudeSessionID, err := forkSession(sessionsDir, fm.sessionName)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error forking session: %v\n", err)
 				os.Exit(1)
@@ -309,6 +306,7 @@ func main() {
 			fmt.Printf("\n✅ Forked session: %s → %s\n", fm.sessionName, newSessionName)
 			fm.sessionName = newSessionName
 			fm.sessionPath = newSessionPath
+			fm.choice = newClaudeSessionID // Store the new session ID
 		}
 	}
 
@@ -347,29 +345,33 @@ func main() {
 		// Small delay before launching
 		time.Sleep(300 * time.Millisecond)
 
-		// Inject session context into system prompt
-		systemPrompt, err := buildSystemPromptWithSessionContext(newSessionProfileContent, fm.sessionPath)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: Could not inject session context: %v\n", err)
-			systemPrompt = string(newSessionProfileContent) // Fallback to original
-		}
+		// Construct relative session path for activation command
+		relativeSessionPath := filepath.Join("sessions", filepath.Base(fm.sessionPath))
+		activationPrompt := fmt.Sprintf("/agents:team-lead-new activate in session %s", relativeSessionPath)
 
-		// Launch the Claude session with --session-id and system prompt
-		launchCmd := exec.Command("claude", "--session-id", claudeSessionID, "--system-prompt", systemPrompt, "load activation files")
+		// Launch the Claude session with activation command
+		launchCmd := exec.Command("claude", "--session-id", claudeSessionID, activationPrompt)
 		launchCmd.Stdin = os.Stdin
 		launchCmd.Stdout = os.Stdout
 		launchCmd.Stderr = os.Stderr
+		launchCmd.Env = os.Environ() // Ensure environment variables are inherited
 
 		if err := launchCmd.Run(); err != nil {
 			fmt.Fprintf(os.Stderr, "\n❌ Error running Claude session: %v\n", err)
 			os.Exit(1)
 		}
-	} else if resumeOrForkChoice == "resume" {
-		// For resume, skip profile selection and directly launch Claude
-		claudeSessionID = extractClaudeSessionID(fm.sessionName)
-		if claudeSessionID == "" {
-			fmt.Fprintf(os.Stderr, "\n❌ Could not extract session ID for resume\n")
-			os.Exit(1)
+	} else if resumeOrForkChoice == "resume" || resumeOrForkChoice == "fork" {
+		// For resume or fork, get the Claude session ID
+		if resumeOrForkChoice == "fork" {
+			// For fork, we already have the new session ID in fm.choice
+			claudeSessionID = fm.choice
+		} else {
+			// For resume, extract from session name
+			claudeSessionID = extractClaudeSessionID(fm.sessionName)
+			if claudeSessionID == "" {
+				fmt.Fprintf(os.Stderr, "\n❌ Could not extract session ID for resume\n")
+				os.Exit(1)
+			}
 		}
 
 		// Update last used timestamp
@@ -383,22 +385,45 @@ func main() {
 		// Clear screen and show launching message
 		fmt.Print("\033[H\033[2J\033[3J") // Clear screen and scrollback
 		fmt.Print("\033[0m")              // Reset all attributes
-		fmt.Printf("\n✅ Resuming Claude session\n")
+
+		if resumeOrForkChoice == "fork" {
+			fmt.Printf("\n✅ Launching forked session\n")
+		} else {
+			fmt.Printf("\n✅ Resuming Claude session\n")
+		}
 		fmt.Printf("📦 Session: %s\n", fm.sessionName)
 		fmt.Printf("🔄 Session ID: %s\n\n", claudeSessionID)
 
-		// Small delay before resuming
+		// Small delay before launching
 		time.Sleep(300 * time.Millisecond)
 
-		// Resume the Claude session interactively
-		resumeCmd := exec.Command("claude", "--resume", claudeSessionID)
-		resumeCmd.Stdin = os.Stdin
-		resumeCmd.Stdout = os.Stdout
-		resumeCmd.Stderr = os.Stderr
+		if resumeOrForkChoice == "fork" {
+			// For fork, start a new session with activation command
+			relativeSessionPath := filepath.Join("sessions", filepath.Base(fm.sessionPath))
+			activationPrompt := fmt.Sprintf("/agents:team-lead-new activate in session %s", relativeSessionPath)
 
-		if err := resumeCmd.Run(); err != nil {
-			fmt.Fprintf(os.Stderr, "\n❌ Error running Claude session: %v\n", err)
-			os.Exit(1)
+			launchCmd := exec.Command("claude", "--session-id", claudeSessionID, activationPrompt)
+			launchCmd.Stdin = os.Stdin
+			launchCmd.Stdout = os.Stdout
+			launchCmd.Stderr = os.Stderr
+			launchCmd.Env = os.Environ()
+
+			if err := launchCmd.Run(); err != nil {
+				fmt.Fprintf(os.Stderr, "\n❌ Error running Claude session: %v\n", err)
+				os.Exit(1)
+			}
+		} else {
+			// For resume, continue existing session
+			resumeCmd := exec.Command("claude", "--resume", claudeSessionID)
+			resumeCmd.Stdin = os.Stdin
+			resumeCmd.Stdout = os.Stdout
+			resumeCmd.Stderr = os.Stderr
+			resumeCmd.Env = os.Environ()
+
+			if err := resumeCmd.Run(); err != nil {
+				fmt.Fprintf(os.Stderr, "\n❌ Error running Claude session: %v\n", err)
+				os.Exit(1)
+			}
 		}
 	} else {
 		// For new/fork sessions, show profile selector
@@ -466,40 +491,8 @@ func main() {
 		fmt.Printf("\n✅ Launching Claude with %s\n", profileName)
 		fmt.Printf("📦 Session: %s\n", fm.sessionName)
 
-		// Step 1: Start Claude session and capture session ID
-		fmt.Printf("🔄 Initializing Claude session...\n\n")
-
-		// Inject session context into system prompt
-		systemPrompt, err := buildSystemPromptWithSessionContext(profileContent, fm.sessionPath)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: Could not inject session context: %v\n", err)
-			systemPrompt = string(profileContent) // Fallback to original
-		}
-
-		initCmd := exec.Command("claude", "--system-prompt", systemPrompt, "-p", "hello", "--output-format", "json")
-		initCmd.Stderr = os.Stderr
-
-		output, err := initCmd.Output()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "\n❌ Error initializing Claude session: %v\n", err)
-			os.Exit(1)
-		}
-
-		// Parse JSON output to extract session ID
-		var sessionData struct {
-			SessionID string `json:"session_id"`
-		}
-		if err := json.Unmarshal(output, &sessionData); err != nil {
-			fmt.Fprintf(os.Stderr, "\n❌ Error parsing session data: %v\nOutput: %s\n", err, string(output))
-			os.Exit(1)
-		}
-
-		if sessionData.SessionID == "" {
-			fmt.Fprintf(os.Stderr, "\n❌ No session ID returned from Claude\n")
-			os.Exit(1)
-		}
-
-		claudeSessionID = sessionData.SessionID
+		// Generate new Claude session ID
+		claudeSessionID = uuid.New().String()
 
 		// Rename session directory to include Claude session ID
 		newSessionPath, err := renameSessionWithClaudeID(fm.sessionPath, fm.sessionName, claudeSessionID)
@@ -511,7 +504,8 @@ func main() {
 		// Update environment variable with new path
 		if newSessionPath != "" {
 			os.Setenv("CLAUDEX_SESSION_PATH", newSessionPath)
-			fmt.Printf("📁 Session directory: %s\n\n", filepath.Base(newSessionPath))
+			fmt.Printf("📁 Session directory: %s\n", filepath.Base(newSessionPath))
+			fmt.Printf("🔄 Session ID: %s\n\n", claudeSessionID)
 
 			// Update last used timestamp
 			if err := updateLastUsed(newSessionPath); err != nil {
@@ -519,16 +513,21 @@ func main() {
 			}
 		}
 
-		// Small delay before resuming
+		// Small delay before launching
 		time.Sleep(300 * time.Millisecond)
 
-		// Resume the Claude session interactively with activation files
-		resumeCmd := exec.Command("claude", "--resume", claudeSessionID, "load activation files")
-		resumeCmd.Stdin = os.Stdin
-		resumeCmd.Stdout = os.Stdout
-		resumeCmd.Stderr = os.Stderr
+		// Construct relative session path for activation command
+		relativeSessionPath := filepath.Join("sessions", filepath.Base(newSessionPath))
+		activationPrompt := fmt.Sprintf("/agents:team-lead-new activate in session %s", relativeSessionPath)
 
-		if err := resumeCmd.Run(); err != nil {
+		// Launch the Claude session with activation command
+		launchCmd := exec.Command("claude", "--session-id", claudeSessionID, activationPrompt)
+		launchCmd.Stdin = os.Stdin
+		launchCmd.Stdout = os.Stdout
+		launchCmd.Stderr = os.Stderr
+		launchCmd.Env = os.Environ() // Ensure environment variables are inherited
+
+		if err := launchCmd.Run(); err != nil {
 			fmt.Fprintf(os.Stderr, "\n❌ Error running Claude session: %v\n", err)
 			os.Exit(1)
 		}
@@ -786,7 +785,10 @@ func copyDir(src, dst string) error {
 	return nil
 }
 
-func forkSession(sessionsDir, originalSessionName string) (string, string, error) {
+func forkSession(sessionsDir, originalSessionName string) (string, string, string, error) {
+	// Generate new UUID for the forked session
+	claudeSessionID := uuid.New().String()
+
 	// Strip the Claude session ID to get the base session name
 	baseSessionName := stripClaudeSessionID(originalSessionName)
 
@@ -801,25 +803,17 @@ func forkSession(sessionsDir, originalSessionName string) (string, string, error
 		}
 	}
 
-	// Find next available fork name
-	counter := 2
-	var newSessionName, newSessionPath string
-	for {
-		newSessionName = fmt.Sprintf("%s-%d", baseSessionName, counter)
-		newSessionPath = filepath.Join(sessionsDir, newSessionName)
-		if _, err := os.Stat(newSessionPath); os.IsNotExist(err) {
-			break
-		}
-		counter++
-	}
+	// Create session name with new Claude session ID
+	newSessionName := fmt.Sprintf("%s-%s", baseSessionName, claudeSessionID)
+	newSessionPath := filepath.Join(sessionsDir, newSessionName)
 
 	// Copy original session directory to new location
 	originalSessionPath := filepath.Join(sessionsDir, originalSessionName)
 	if err := copyDir(originalSessionPath, newSessionPath); err != nil {
-		return "", "", fmt.Errorf("failed to copy session directory: %w", err)
+		return "", "", "", fmt.Errorf("failed to copy session directory: %w", err)
 	}
 
-	return newSessionName, newSessionPath, nil
+	return newSessionName, newSessionPath, claudeSessionID, nil
 }
 
 func hasClaudeSessionID(sessionName string) bool {
