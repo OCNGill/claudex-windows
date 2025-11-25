@@ -178,5 +178,120 @@ done
 # Disown to ensure it keeps running after script exits
 disown
 
+# ---------------------------------------------------------
+# Update Session Overview Documentation on Agent Stop
+# ---------------------------------------------------------
+log_message "Starting session overview documentation update for agent: $AGENT_ID"
+
+(
+    # Determine transcript to process
+    # Priority: Use main session transcript if available
+    # Extract base path from agent transcript and construct main transcript path
+    AGENT_TRANSCRIPT_DIR=$(dirname "$TRANSCRIPT_PATH")
+    MAIN_TRANSCRIPT="${AGENT_TRANSCRIPT_DIR}/${SESSION_ID}.jsonl"
+
+    if [ -f "$MAIN_TRANSCRIPT" ]; then
+        TRANSCRIPT_TO_PROCESS="$MAIN_TRANSCRIPT"
+        log_message "Using main session transcript: $MAIN_TRANSCRIPT"
+    else
+        # Fallback to agent transcript
+        TRANSCRIPT_TO_PROCESS="$TRANSCRIPT_PATH"
+        log_message "Main transcript not found, using agent transcript: $TRANSCRIPT_PATH"
+    fi
+
+    # Shared state file for incremental processing
+    LAST_PROCESSED_FILE="$SESSION_FOLDER/.last-processed-line-overview"
+    START_LINE=1
+
+    if [ -f "$LAST_PROCESSED_FILE" ]; then
+        START_LINE=$(cat "$LAST_PROCESSED_FILE")
+        START_LINE=$((START_LINE + 1))
+    fi
+
+    TOTAL_LINES=$(wc -l < "$TRANSCRIPT_TO_PROCESS" 2>/dev/null || echo "0")
+
+    if [ "$TOTAL_LINES" -eq 0 ] || [ "$START_LINE" -gt "$TOTAL_LINES" ]; then
+        log_message "No new transcript lines to process (start: $START_LINE, total: $TOTAL_LINES)"
+        exit 0
+    fi
+
+    log_message "Processing transcript lines $START_LINE to $TOTAL_LINES"
+
+    # Extract increment
+    TRANSCRIPT_INCREMENT=$(tail -n "+$START_LINE" "$TRANSCRIPT_TO_PROCESS")
+
+    # Update marker immediately to prevent double processing
+    echo "$TOTAL_LINES" > "$LAST_PROCESSED_FILE"
+
+    # Filter relevant content (same logic as auto-doc-updater)
+    RELEVANT_CONTENT=$(echo "$TRANSCRIPT_INCREMENT" | jq -c '
+        if .type == "assistant" and .message.content then
+            {
+                type: "assistant_message",
+                timestamp: .timestamp,
+                content: [.message.content[] | select(.type == "text") | .text]
+            }
+        elif (.type == "user" and .toolUseResult.status == "completed" and .toolUseResult.agentId != null and .toolUseResult.agentId != "") then
+            {
+                type: "agent_result",
+                timestamp: .timestamp,
+                agentId: .toolUseResult.agentId,
+                content: [.toolUseResult.content[] | select(.type == "text") | .text]
+            }
+        else
+            empty
+        end
+    ')
+
+    CONTENT_LENGTH=$(echo "$RELEVANT_CONTENT" | wc -c)
+    log_message "Extracted relevant content ($CONTENT_LENGTH bytes)"
+
+    if [ -z "$RELEVANT_CONTENT" ] || [ "$CONTENT_LENGTH" -lt 10 ]; then
+        log_message "No relevant content found in transcript increment"
+        exit 0
+    fi
+
+    # List existing documentation
+    DOC_FILES=$(ls -1 "$SESSION_FOLDER"/*.md 2>/dev/null | grep -v "session-history.md" || echo "")
+    DOC_CONTEXT=""
+    if [ ! -z "$DOC_FILES" ]; then
+        DOC_CONTEXT="Existing documentation files:\n"
+        for f in $DOC_FILES; do
+            DOC_CONTEXT+="- $(basename "$f")\n"
+        done
+    else
+        DOC_CONTEXT="No existing documentation files."
+    fi
+
+    # Load shared prompt template
+    PROMPT_TEMPLATE=$(cat "$SCRIPT_DIR/prompts/session-overview-documenter.md")
+
+    # Substitute variables
+    PROMPT=$(eval "echo \"$PROMPT_TEMPLATE\"")
+
+    log_message "Calling Claude to update session-overview.md (triggered by agent stop)"
+
+    # Call Claude with recursion guard
+    export CLAUDE_HOOK_INTERNAL=1
+    OUTPUT=$(claude -p "$PROMPT" --model haiku 2>&1)
+    EXIT_CODE=$?
+
+    log_message "Claude finished with exit code $EXIT_CODE"
+    log_message "Output summary: ${OUTPUT:0:200}..."
+
+    # Reset PostToolUse counter to prevent redundant update shortly after
+    COUNTER_FILE="$SESSION_FOLDER/.doc-update-counter"
+    if [ -f "$COUNTER_FILE" ]; then
+        echo "0" > "$COUNTER_FILE"
+        log_message "Reset PostToolUse counter to 0 to prevent duplicate documentation update"
+    fi
+
+) >/dev/null 2>&1 &
+
+# Disown to detach from parent shell
+disown
+
+log_message "Session overview documentation update dispatched in background"
+
 log_message "Main script exiting"
 exit 0

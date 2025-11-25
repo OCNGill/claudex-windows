@@ -67,7 +67,7 @@ fi
 
 # Frequency Control
 COUNTER_FILE="$SESSION_FOLDER/.doc-update-counter"
-LAST_PROCESSED_FILE="$SESSION_FOLDER/.last-processed-line"
+LAST_PROCESSED_FILE="$SESSION_FOLDER/.last-processed-line-overview"
 
 # Initialize counter if not exists
 if [ ! -f "$COUNTER_FILE" ]; then
@@ -174,39 +174,12 @@ echo "$TOTAL_LINES" > "$LAST_PROCESSED_FILE"
         DOC_CONTEXT="No existing documentation files."
     fi
     
-    # Construct Prompt
-    PROMPT="You are an automated documentation maintainer for a coding session.
-Your SOLE task is to maintain the 'session-overview.md' file in the session folder.
+    # Load shared prompt template
+    HOOKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    PROMPT_TEMPLATE=$(cat "$HOOKS_DIR/prompts/session-overview-documenter.md")
 
-CONTEXT:
-Session Folder: $SESSION_FOLDER
-$DOC_CONTEXT
-
-TRANSCRIPT INCREMENT (Relevant parts):
----
-$RELEVANT_CONTENT
----
-
-INSTRUCTIONS:
-1. Analyze the transcript increment to understand what progress was made, decisions taken, or technical details discovered.
-2. UPDATE 'session-overview.md' to reflect these changes. 
-   - If the file doesn't exist, create it.
-3. **CRITICAL CONSTRAINTS**:
-   - **Target File**: You MUST ONLY write to 'session-overview.md'. Do NOT create other files.
-   - **Length Limit**: The file MUST NEVER exceed 500 lines. You must aggressively summarize or remove older/less relevant details.
-   - **No Redundancy**: Do NOT duplicate detailed information found in other documents.
-   - **Use Pointers**: heavily rely on linking to other existing documents (e.g., research notes, plans). Add only 1-3 lines of context for each link so the reader knows what to expect.
-
-4. **Structure**:
-   - Keep a high-level status of the session.
-   - List key achievements and current focus.
-   - Maintain a 'Key Documents' section with links and brief context.
-   - Remove obsolete information to stay within the line limit.
-
-5. Output the FULL content of the updated 'session-overview.md' file.
-6. Use the 'Write' or 'Edit' tools to save the file.
-
-GOAL: A concise, high-level overview (<500 lines) that acts as an index to the detailed work."
+    # Substitute variables
+    PROMPT=$(eval "echo \"$PROMPT_TEMPLATE\"")
 
     log_message "Calling Claude to update documentation..."
     
