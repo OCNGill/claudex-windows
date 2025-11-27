@@ -12,6 +12,11 @@ In Progress:
         - Add `python.md`, `go.md`, `php.md`, `frontend.md`, `backend.md` as needed.
       - Create composable agent definitions in `profiles/agents/` that combine the Engineer role with specific skills.
       - Ensure the composition mechanism works (e.g., an agent file that imports/references the role and multiple skills).
+      - Refactor Installer (`claudex-install`):
+        - Implement a "project research" step to analyze the target directory.
+        - Detect technology stack (languages, frameworks, frontend/backend/mobile).
+        - Dynamically assemble/configure Engineer agents (and maybe others as well) based on findings.
+        - Handle empty projects: Prompt user for project description/details if no stack is detected, then configure agents based on user input.
 
 To Do: 
   - Adjust Agents' models:
