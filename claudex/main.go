@@ -1073,12 +1073,16 @@ func copyDir(src, dst string) error {
 				return err
 			}
 		} else {
-			// Copy file
+			// Copy file, preserving execute permission for scripts
 			data, err := os.ReadFile(srcPath)
 			if err != nil {
 				return err
 			}
-			if err := os.WriteFile(dstPath, data, 0644); err != nil {
+			perm := os.FileMode(0644)
+			if strings.HasSuffix(entry.Name(), ".sh") {
+				perm = 0755
+			}
+			if err := os.WriteFile(dstPath, data, perm); err != nil {
 				return err
 			}
 		}
