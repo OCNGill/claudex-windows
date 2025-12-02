@@ -23,15 +23,105 @@ import (
 //go:embed profiles
 var profilesFS embed.FS
 
-// ensureClaudeDirectory sets up the .claude directory in the project (always overwrites)
+// handleExistingClaudeDirectory checks if .claude exists and handles user choice
+func handleExistingClaudeDirectory(projectDir, claudeDir string) (proceed bool, err error) {
+	// Check if .claude exists
+	if _, err := os.Stat(claudeDir); os.IsNotExist(err) {
+		// .claude doesn't exist, proceed with setup
+		return true, nil
+	}
+
+	// List contents of .claude directory
+	entries, err := os.ReadDir(claudeDir)
+	if err != nil {
+		return false, fmt.Errorf("failed to read .claude directory: %w", err)
+	}
+
+	// Print warning and file listing
+	fmt.Println()
+	fmt.Println("⚠️  Found existing .claude directory")
+	fmt.Println()
+	fmt.Println("Contents:")
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			// Count files in subdirectory
+			subPath := filepath.Join(claudeDir, entry.Name())
+			subEntries, err := os.ReadDir(subPath)
+			fileCount := 0
+			if err == nil {
+				for _, subEntry := range subEntries {
+					if !subEntry.IsDir() {
+						fileCount++
+					}
+				}
+			}
+			fmt.Printf("  - %s/ (%d files)\n", entry.Name(), fileCount)
+		} else {
+			fmt.Printf("  - %s\n", entry.Name())
+		}
+	}
+
+	fmt.Println()
+	fmt.Println("What would you like to do?")
+	fmt.Println("  [1] Overwrite (delete existing and install fresh)")
+	fmt.Println("  [2] Backup & Install (save to .claude.backup-YYYYMMDD-HHMMSS)")
+	fmt.Println("  [3] Cancel")
+	fmt.Println()
+
+	// Get user input
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Print("Enter choice [1/2/3]: ")
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			return false, fmt.Errorf("failed to read input: %w", err)
+		}
+		input = strings.TrimSpace(input)
+
+		switch input {
+		case "1":
+			// Option 1: Overwrite - remove existing .claude
+			if err := os.RemoveAll(claudeDir); err != nil {
+				return false, fmt.Errorf("failed to remove existing .claude: %w", err)
+			}
+			fmt.Println()
+			fmt.Println("✓ Removed existing .claude directory")
+			return true, nil
+
+		case "2":
+			// Option 2: Backup & Install - rename to .claude.backup-{timestamp}
+			timestamp := time.Now().Format("20060102-150405")
+			backupDir := filepath.Join(projectDir, fmt.Sprintf(".claude.backup-%s", timestamp))
+			if err := os.Rename(claudeDir, backupDir); err != nil {
+				return false, fmt.Errorf("failed to backup .claude: %w", err)
+			}
+			fmt.Println()
+			fmt.Printf("✓ Backed up to %s\n", filepath.Base(backupDir))
+			return true, nil
+
+		case "3":
+			// Option 3: Cancel - exit without changes
+			return false, nil
+
+		default:
+			// Invalid input - re-prompt
+			fmt.Println("Invalid choice. Please enter 1, 2, or 3.")
+		}
+	}
+}
+
+// ensureClaudeDirectory sets up the .claude directory in the project
 func ensureClaudeDirectory(projectDir string) error {
 	claudeDir := filepath.Join(projectDir, ".claude")
 
-	// Remove existing .claude if it exists (file or directory) - always overwrite
-	if _, err := os.Stat(claudeDir); err == nil {
-		if err := os.RemoveAll(claudeDir); err != nil {
-			return fmt.Errorf("failed to remove existing .claude: %w", err)
-		}
+	// Handle existing .claude directory with user choice
+	proceed, err := handleExistingClaudeDirectory(projectDir, claudeDir)
+	if err != nil {
+		return err
+	}
+	if !proceed {
+		return fmt.Errorf("installation cancelled by user")
 	}
 
 	// Get config dir (~/.config/claudex)
