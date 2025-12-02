@@ -1249,6 +1249,19 @@ func freshMemorySession(sessionsDir, originalSessionName string) (string, string
 		return "", "", "", fmt.Errorf("failed to copy session directory: %w", err)
 	}
 
+	// Reset tracking files for fresh session (new transcript starts at line 1)
+	trackingFiles := []string{
+		filepath.Join(newSessionPath, ".last-processed-line-overview"),
+		filepath.Join(newSessionPath, ".last-processed-line"),
+	}
+	for _, f := range trackingFiles {
+		os.Remove(f) // Ignore errors - file may not exist
+	}
+
+	// Reset doc update counter
+	counterFile := filepath.Join(newSessionPath, ".doc-update-counter")
+	os.WriteFile(counterFile, []byte("0"), 0644)
+
 	// DELETE the original folder (key difference from fork)
 	if err := os.RemoveAll(originalSessionPath); err != nil {
 		return "", "", "", fmt.Errorf("failed to delete original session: %w", err)
