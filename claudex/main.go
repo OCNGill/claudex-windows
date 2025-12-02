@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"embed"
+	"flag"
 	"fmt"
 	"io/fs"
 	"log"
@@ -23,96 +24,16 @@ import (
 //go:embed profiles
 var profilesFS embed.FS
 
+var noOverwrite = flag.Bool("no-overwrite", false, "skip overwriting existing .claude files")
+
 // handleExistingClaudeDirectory checks if .claude exists and handles user choice
 func handleExistingClaudeDirectory(projectDir, claudeDir string) (proceed bool, err error) {
-	// Check if .claude exists
-	if _, err := os.Stat(claudeDir); os.IsNotExist(err) {
-		// .claude doesn't exist, proceed with setup
-		return true, nil
-	}
-
-	// List contents of .claude directory
-	entries, err := os.ReadDir(claudeDir)
-	if err != nil {
-		return false, fmt.Errorf("failed to read .claude directory: %w", err)
-	}
-
-	// Print warning and file listing
-	fmt.Println()
-	fmt.Println("⚠️  Found existing .claude directory")
-	fmt.Println()
-	fmt.Println("Contents:")
-
-	for _, entry := range entries {
-		if entry.IsDir() {
-			// Count files in subdirectory
-			subPath := filepath.Join(claudeDir, entry.Name())
-			subEntries, err := os.ReadDir(subPath)
-			fileCount := 0
-			if err == nil {
-				for _, subEntry := range subEntries {
-					if !subEntry.IsDir() {
-						fileCount++
-					}
-				}
-			}
-			fmt.Printf("  - %s/ (%d files)\n", entry.Name(), fileCount)
-		} else {
-			fmt.Printf("  - %s\n", entry.Name())
-		}
-	}
-
-	fmt.Println()
-	fmt.Println("What would you like to do?")
-	fmt.Println("  [1] Overwrite (delete existing and install fresh)")
-	fmt.Println("  [2] Backup & Install (save to .claude.backup-YYYYMMDD-HHMMSS)")
-	fmt.Println("  [3] Cancel")
-	fmt.Println()
-
-	// Get user input
-	reader := bufio.NewReader(os.Stdin)
-	for {
-		fmt.Print("Enter choice [1/2/3]: ")
-		input, err := reader.ReadString('\n')
-		if err != nil {
-			return false, fmt.Errorf("failed to read input: %w", err)
-		}
-		input = strings.TrimSpace(input)
-
-		switch input {
-		case "1":
-			// Option 1: Overwrite - remove existing .claude
-			if err := os.RemoveAll(claudeDir); err != nil {
-				return false, fmt.Errorf("failed to remove existing .claude: %w", err)
-			}
-			fmt.Println()
-			fmt.Println("✓ Removed existing .claude directory")
-			return true, nil
-
-		case "2":
-			// Option 2: Backup & Install - rename to .claude.backup-{timestamp}
-			timestamp := time.Now().Format("20060102-150405")
-			backupDir := filepath.Join(projectDir, fmt.Sprintf(".claude.backup-%s", timestamp))
-			if err := os.Rename(claudeDir, backupDir); err != nil {
-				return false, fmt.Errorf("failed to backup .claude: %w", err)
-			}
-			fmt.Println()
-			fmt.Printf("✓ Backed up to %s\n", filepath.Base(backupDir))
-			return true, nil
-
-		case "3":
-			// Option 3: Cancel - exit without changes
-			return false, nil
-
-		default:
-			// Invalid input - re-prompt
-			fmt.Println("Invalid choice. Please enter 1, 2, or 3.")
-		}
-	}
+	// Silent merge: always proceed with setup
+	return true, nil
 }
 
 // ensureClaudeDirectory sets up the .claude directory in the project
-func ensureClaudeDirectory(projectDir string) error {
+func ensureClaudeDirectory(projectDir string, noOverwrite bool) error {
 	claudeDir := filepath.Join(projectDir, ".claude")
 
 	// Handle existing .claude directory with user choice
@@ -158,7 +79,7 @@ func ensureClaudeDirectory(projectDir string) error {
 	// Copy hooks from ~/.config/claudex/hooks/
 	sourceHooksDir := filepath.Join(claudexConfigDir, "hooks")
 	if _, err := os.Stat(sourceHooksDir); err == nil {
-		if err := copyDir(sourceHooksDir, hooksDir); err != nil {
+		if err := copyDir(sourceHooksDir, hooksDir, noOverwrite); err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: Failed to copy hooks: %v\n", err)
 		}
 	} else {
@@ -183,14 +104,32 @@ func ensureClaudeDirectory(projectDir string) error {
 
 					// Copy to agents/
 					agentTarget := filepath.Join(agentsDir, entry.Name()+".md")
-					if err := os.WriteFile(agentTarget, content, 0644); err != nil {
-						fmt.Fprintf(os.Stderr, "Warning: Failed to copy to agents/%s: %v\n", entry.Name(), err)
+					if noOverwrite {
+						if _, err := os.Stat(agentTarget); err != nil {
+							// File doesn't exist, write it
+							if err := os.WriteFile(agentTarget, content, 0644); err != nil {
+								fmt.Fprintf(os.Stderr, "Warning: Failed to copy to agents/%s: %v\n", entry.Name(), err)
+							}
+						}
+					} else {
+						if err := os.WriteFile(agentTarget, content, 0644); err != nil {
+							fmt.Fprintf(os.Stderr, "Warning: Failed to copy to agents/%s: %v\n", entry.Name(), err)
+						}
 					}
 
 					// Copy to commands/agents/
 					commandTarget := filepath.Join(commandsAgentsDir, entry.Name()+".md")
-					if err := os.WriteFile(commandTarget, content, 0644); err != nil {
-						fmt.Fprintf(os.Stderr, "Warning: Failed to copy to commands/agents/%s: %v\n", entry.Name(), err)
+					if noOverwrite {
+						if _, err := os.Stat(commandTarget); err != nil {
+							// File doesn't exist, write it
+							if err := os.WriteFile(commandTarget, content, 0644); err != nil {
+								fmt.Fprintf(os.Stderr, "Warning: Failed to copy to commands/agents/%s: %v\n", entry.Name(), err)
+							}
+						}
+					} else {
+						if err := os.WriteFile(commandTarget, content, 0644); err != nil {
+							fmt.Fprintf(os.Stderr, "Warning: Failed to copy to commands/agents/%s: %v\n", entry.Name(), err)
+						}
 					}
 				}
 			}
@@ -266,9 +205,19 @@ func ensureClaudeDirectory(projectDir string) error {
   }
 }
 `
+	// Check if noOverwrite and file exists
+	if noOverwrite {
+		if _, err := os.Stat(settingsPath); err == nil {
+			// File exists, skip writing
+			goto skipSettings
+		}
+	}
+
 	if err := os.WriteFile(settingsPath, []byte(settingsContent), 0644); err != nil {
 		return fmt.Errorf("failed to write settings.local.json: %w", err)
 	}
+
+skipSettings:
 
 	// Detect project stack and generate principal-engineer agents
 	stacks := detectProjectStacks(projectDir)
@@ -282,7 +231,7 @@ func ensureClaudeDirectory(projectDir string) error {
 	skillsDir := filepath.Join(claudexConfigDir, "profiles", "skills")
 
 	for _, stack := range stacks {
-		if err := assembleEngineerAgent(stack, agentsDir, commandsAgentsDir, rolesDir, skillsDir); err != nil {
+		if err := assembleEngineerAgent(stack, agentsDir, commandsAgentsDir, rolesDir, skillsDir, noOverwrite); err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: Failed to assemble principal-engineer-%s: %v\n", stack, err)
 		}
 	}
@@ -296,14 +245,32 @@ func ensureClaudeDirectory(projectDir string) error {
 		if aliasContent, err := os.ReadFile(aliasSource); err == nil {
 			// Copy to agents/principal-engineer.md
 			aliasAgentTarget := filepath.Join(agentsDir, "principal-engineer.md")
-			if err := os.WriteFile(aliasAgentTarget, aliasContent, 0644); err != nil {
-				fmt.Fprintf(os.Stderr, "Warning: Failed to create principal-engineer alias: %v\n", err)
+			if noOverwrite {
+				if _, err := os.Stat(aliasAgentTarget); err != nil {
+					// File doesn't exist, write it
+					if err := os.WriteFile(aliasAgentTarget, aliasContent, 0644); err != nil {
+						fmt.Fprintf(os.Stderr, "Warning: Failed to create principal-engineer alias: %v\n", err)
+					}
+				}
+			} else {
+				if err := os.WriteFile(aliasAgentTarget, aliasContent, 0644); err != nil {
+					fmt.Fprintf(os.Stderr, "Warning: Failed to create principal-engineer alias: %v\n", err)
+				}
 			}
 
 			// Copy to commands/agents/principal-engineer.md
 			aliasCommandTarget := filepath.Join(commandsAgentsDir, "principal-engineer.md")
-			if err := os.WriteFile(aliasCommandTarget, aliasContent, 0644); err != nil {
-				fmt.Fprintf(os.Stderr, "Warning: Failed to create principal-engineer command alias: %v\n", err)
+			if noOverwrite {
+				if _, err := os.Stat(aliasCommandTarget); err != nil {
+					// File doesn't exist, write it
+					if err := os.WriteFile(aliasCommandTarget, aliasContent, 0644); err != nil {
+						fmt.Fprintf(os.Stderr, "Warning: Failed to create principal-engineer command alias: %v\n", err)
+					}
+				}
+			} else {
+				if err := os.WriteFile(aliasCommandTarget, aliasContent, 0644); err != nil {
+					fmt.Fprintf(os.Stderr, "Warning: Failed to create principal-engineer command alias: %v\n", err)
+				}
 			}
 		}
 	}
@@ -374,7 +341,7 @@ func fileExists(path string) bool {
 }
 
 // assembleEngineerAgent creates a principal-engineer-{stack} agent from role + skill
-func assembleEngineerAgent(stack, agentsDir, commandsAgentsDir, rolesDir, skillsDir string) error {
+func assembleEngineerAgent(stack, agentsDir, commandsAgentsDir, rolesDir, skillsDir string, noOverwrite bool) error {
 	roleFile := filepath.Join(rolesDir, "engineer.md")
 	skillFile := filepath.Join(skillsDir, stack+".md")
 
@@ -416,14 +383,32 @@ color: blue
 
 	// Write to agents/ directory
 	agentPath := filepath.Join(agentsDir, fmt.Sprintf("principal-engineer-%s.md", stack))
-	if err := os.WriteFile(agentPath, []byte(agentContent), 0644); err != nil {
-		return fmt.Errorf("failed to write agent file: %w", err)
+	if noOverwrite {
+		if _, err := os.Stat(agentPath); err != nil {
+			// File doesn't exist, write it
+			if err := os.WriteFile(agentPath, []byte(agentContent), 0644); err != nil {
+				return fmt.Errorf("failed to write agent file: %w", err)
+			}
+		}
+	} else {
+		if err := os.WriteFile(agentPath, []byte(agentContent), 0644); err != nil {
+			return fmt.Errorf("failed to write agent file: %w", err)
+		}
 	}
 
 	// Copy to commands/agents/
 	commandPath := filepath.Join(commandsAgentsDir, fmt.Sprintf("principal-engineer-%s.md", stack))
-	if err := os.WriteFile(commandPath, []byte(agentContent), 0644); err != nil {
-		return fmt.Errorf("failed to write command file: %w", err)
+	if noOverwrite {
+		if _, err := os.Stat(commandPath); err != nil {
+			// File doesn't exist, write it
+			if err := os.WriteFile(commandPath, []byte(agentContent), 0644); err != nil {
+				return fmt.Errorf("failed to write command file: %w", err)
+			}
+		}
+	} else {
+		if err := os.WriteFile(commandPath, []byte(agentContent), 0644); err != nil {
+			return fmt.Errorf("failed to write command file: %w", err)
+		}
 	}
 
 	return nil
@@ -497,6 +482,7 @@ You are working within an active Claudex session. ALL documentation, plans, and 
 }
 
 func main() {
+	flag.Parse()
 	projectDir, err := os.Getwd()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -504,7 +490,7 @@ func main() {
 	}
 
 	// Ensure .claude directory is set up
-	if err := ensureClaudeDirectory(projectDir); err != nil {
+	if err := ensureClaudeDirectory(projectDir, *noOverwrite); err != nil {
 		fmt.Fprintf(os.Stderr, "Error setting up .claude directory: %v\n", err)
 		os.Exit(1)
 	}
@@ -1160,7 +1146,7 @@ func extractProfileDescription(profilePath string) string {
 	return ""
 }
 
-func copyDir(src, dst string) error {
+func copyDir(src, dst string, noOverwrite bool) error {
 	// Read source directory
 	entries, err := os.ReadDir(src)
 	if err != nil {
@@ -1179,11 +1165,19 @@ func copyDir(src, dst string) error {
 
 		if entry.IsDir() {
 			// Recursively copy subdirectory
-			if err := copyDir(srcPath, dstPath); err != nil {
+			if err := copyDir(srcPath, dstPath, noOverwrite); err != nil {
 				return err
 			}
 		} else {
 			// Copy file, preserving execute permission for scripts
+
+			// Check if noOverwrite and file exists
+			if noOverwrite {
+				if _, err := os.Stat(dstPath); err == nil {
+					continue // File exists, skip
+				}
+			}
+
 			data, err := os.ReadFile(srcPath)
 			if err != nil {
 				return err
@@ -1225,7 +1219,7 @@ func forkSession(sessionsDir, originalSessionName string) (string, string, strin
 
 	// Copy original session directory to new location
 	originalSessionPath := filepath.Join(sessionsDir, originalSessionName)
-	if err := copyDir(originalSessionPath, newSessionPath); err != nil {
+	if err := copyDir(originalSessionPath, newSessionPath, false); err != nil {
 		return "", "", "", fmt.Errorf("failed to copy session directory: %w", err)
 	}
 
@@ -1245,7 +1239,7 @@ func freshMemorySession(sessionsDir, originalSessionName string) (string, string
 
 	// Copy original session directory to new location
 	originalSessionPath := filepath.Join(sessionsDir, originalSessionName)
-	if err := copyDir(originalSessionPath, newSessionPath); err != nil {
+	if err := copyDir(originalSessionPath, newSessionPath, false); err != nil {
 		return "", "", "", fmt.Errorf("failed to copy session directory: %w", err)
 	}
 
@@ -1287,7 +1281,7 @@ func forkSessionWithDescription(sessionsDir, originalSessionName, description st
 
 	// Copy original session directory to new location
 	originalSessionPath := filepath.Join(sessionsDir, originalSessionName)
-	if err := copyDir(originalSessionPath, newSessionPath); err != nil {
+	if err := copyDir(originalSessionPath, newSessionPath, false); err != nil {
 		return "", "", "", fmt.Errorf("failed to copy session directory: %w", err)
 	}
 
