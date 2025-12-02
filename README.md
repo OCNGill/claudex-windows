@@ -2,6 +2,14 @@
 
 A modern, interactive session manager for Claude Code with AI-powered agent profiles.
 
+## ⚠️ Heads Up
+
+- **Max Subscription Recommended**: To get the most out of this tool, a Max subscription is encouraged. Some agents (e.g., Architect) use the Opus model, and others (e.g., Documenter) are token-intensive.
+- **MCPs Recommended**: The **Sequential Thinking** and **Context7** MCPs are highly encouraged as they significantly improve agent quality.
+  - [How to use MCPs in Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/mcp-in-claude-code)
+  - [Sequential Thinking MCP](https://github.com/modelcontextprotocol/servers/tree/main/src/sequential-thinking)
+  - [Context7 MCP](https://github.com/context7/mcp-server)
+
 ## Features
 
 - 🎨 Beautiful TUI built with Bubble Tea
@@ -35,9 +43,13 @@ export PATH="$HOME/.local/bin:$PATH"
 
 ## Usage
 
+Run the tool from the root of your project or repository:
+
 ```bash
 claudex
 ```
+
+Claudex will automatically create a `.claude` directory in your current location with all the necessary enhancements (rules, profiles, hooks) to supercharge Claude.
 
 The TUI will guide you through:
 1. Session selection (new, ephemeral, or existing)
@@ -57,7 +69,7 @@ Claudex includes specialized agent profiles:
 
 | Profile | Purpose |
 |---------|---------|
-| `team-lead-new` | Strategic planning and orchestration |
+| `team-lead` | Strategic planning and orchestration |
 | `architect` | System design and architecture |
 | `researcher` | Deep analysis and investigation |
 | `principal-engineer-{stack}` | Implementation (TypeScript, Python, Go) |
