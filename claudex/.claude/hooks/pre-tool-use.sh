@@ -118,6 +118,10 @@ SESSION_FOLDER="${SESSION_FOLDERS[0]}"
 SESSION_PATH=$(cd "$SESSION_FOLDER" && pwd)
 log_message "Session Folder: $SESSION_PATH"
 
+# Read documentation paths from environment
+DOC_PATHS="${CLAUDEX_DOC_PATHS:-}"
+log_message "Doc Paths: $DOC_PATHS"
+
 # List existing files in session folder (excluding hidden files)
 FILE_LISTING=$(ls -1 "$SESSION_PATH" 2>/dev/null | grep -v '^\.' || echo "")
 
@@ -125,6 +129,32 @@ if [ -z "$FILE_LISTING" ]; then
     FILES_DISPLAY="- (No files yet - you'll be the first to create documentation!)"
 else
     FILES_DISPLAY=$(echo "$FILE_LISTING" | sed 's/^/- /')
+fi
+
+# Build documentation context block
+DOC_CONTEXT=""
+if [ -n "$DOC_PATHS" ]; then
+    IFS=':' read -ra DOC_ARRAY <<< "$DOC_PATHS"
+    DOC_CONTEXT="### Documentation References (READ THESE):
+"
+    for doc_path in "${DOC_ARRAY[@]}"; do
+        if [ -d "$doc_path" ]; then
+            DOC_CONTEXT+="- Directory: \`$doc_path\` (explore all files within)
+"
+        elif [ -f "$doc_path" ]; then
+            DOC_CONTEXT+="- File: \`$doc_path\`
+"
+        else
+            DOC_CONTEXT+="- Path: \`$doc_path\` (verify existence)
+"
+        fi
+    done
+    DOC_CONTEXT+="
+**IMPORTANT**: Read these documentation files BEFORE starting any work.
+
+---
+
+"
 fi
 
 # Extract description (prompt already extracted above)
@@ -159,7 +189,7 @@ ${FILES_DISPLAY}
 
 ---
 
-## ORIGINAL REQUEST
+${DOC_CONTEXT}## ORIGINAL REQUEST
 
 ${ORIGINAL_PROMPT}
 CONTEXT_EOF

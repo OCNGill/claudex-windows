@@ -24,7 +24,18 @@ import (
 //go:embed profiles
 var profilesFS embed.FS
 
+// stringSlice implements flag.Value to allow multiple --doc flags
+type stringSlice []string
+
+func (s *stringSlice) String() string { return strings.Join(*s, ":") }
+func (s *stringSlice) Set(v string) error { *s = append(*s, v); return nil }
+
 var noOverwrite = flag.Bool("no-overwrite", false, "skip overwriting existing .claude files")
+var docPaths stringSlice
+
+func init() {
+	flag.Var(&docPaths, "doc", "documentation path for agent context (can be specified multiple times)")
+}
 
 // handleExistingClaudeDirectory checks if .claude exists and handles user choice
 func handleExistingClaudeDirectory(projectDir, claudeDir string) (proceed bool, err error) {
@@ -414,6 +425,20 @@ color: blue
 	return nil
 }
 
+// resolveDocPaths converts a list of documentation paths to absolute paths
+// and joins them with colon separators (Unix PATH convention)
+func resolveDocPaths(paths []string) string {
+	var resolved []string
+	for _, p := range paths {
+		absPath, err := filepath.Abs(p)
+		if err != nil {
+			absPath = p
+		}
+		resolved = append(resolved, absPath)
+	}
+	return strings.Join(resolved, ":")
+}
+
 // buildSystemPromptWithSessionContext injects session context into the system prompt
 // to ensure all agents follow session folder documentation rules.
 func buildSystemPromptWithSessionContext(profileContent []byte, sessionPath string) (string, error) {
@@ -746,6 +771,9 @@ func main() {
 	// Set environment
 	os.Setenv("CLAUDEX_SESSION", fm.sessionName)
 	os.Setenv("CLAUDEX_SESSION_PATH", fm.sessionPath)
+	if len(docPaths) > 0 {
+		os.Setenv("CLAUDEX_DOC_PATHS", resolveDocPaths(docPaths))
+	}
 
 	// Handle resume vs new/fork session
 	var claudeSessionID string

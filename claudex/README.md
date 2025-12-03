@@ -51,6 +51,70 @@ The program will guide you through:
 - Type description and press `Enter`
 - Claude will generate a slug-based name automatically
 
+## Documentation Loading with --doc Flag
+
+The `--doc` flag allows you to provide context documentation to Claude. For optimal performance, use the **index file pattern** instead of passing entire directories.
+
+### The Problem with Directories
+
+```bash
+# Not recommended: Loads ALL files immediately
+claudex --doc=./docs/
+```
+
+When you pass a directory, Claude loads **all documentation files** into the context window upfront. This:
+- Wastes context tokens on irrelevant docs
+- Slows down agent initialization
+- Makes it harder for Claude to find relevant information
+
+### The Solution: Index File Pattern
+
+Create an index file (e.g., `docs/INDEX.md`) that serves as a table of contents:
+
+```bash
+# Recommended: Load index, read details on-demand
+claudex --doc=./docs/INDEX.md
+```
+
+**Benefits:**
+1. Minimal initial context usage (only the index loads)
+2. Claude reads detailed specs on-demand when relevant
+3. Better navigation - Claude understands doc structure before diving in
+4. Faster startup and more efficient token usage
+
+### Example Index File Structure
+
+```markdown
+# Project Documentation Index
+
+## Architecture
+- [System Overview](./architecture/overview.md) - High-level system design and components
+- [Database Schema](./architecture/database.md) - Database tables and relationships
+- [API Gateway](./architecture/gateway.md) - Request routing and middleware
+
+## API Reference
+- [REST Endpoints](./api/rest.md) - All REST API endpoints and payloads
+- [WebSocket Events](./api/websocket.md) - Real-time event specifications
+- [Authentication](./api/auth.md) - OAuth2 flows and token management
+
+## Development
+- [Setup Guide](./dev/setup.md) - Local development environment setup
+- [Testing Strategy](./dev/testing.md) - How to write and run tests
+- [Deployment](./dev/deployment.md) - CI/CD pipeline and production deployment
+
+## Code Standards
+- [Style Guide](./standards/style.md) - Code formatting and naming conventions
+- [Best Practices](./standards/best-practices.md) - Patterns and anti-patterns
+```
+
+### Best Practices
+
+1. **Keep descriptions concise** - Brief one-liners help Claude choose which docs to read
+2. **Use relative paths** - Makes the index portable
+3. **Organize by category** - Group related docs together
+4. **Update regularly** - Keep the index in sync with your documentation
+5. **Include context** - Add enough detail so Claude knows when to read each file
+
 ## Session Data
 
 Sessions are stored in `./sessions/` with:
