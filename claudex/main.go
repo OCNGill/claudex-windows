@@ -37,6 +37,17 @@ func init() {
 	flag.Var(&docPaths, "doc", "documentation path for agent context (can be specified multiple times)")
 }
 
+// isFlagSet checks if a flag was explicitly set by the user
+func isFlagSet(name string) bool {
+	found := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			found = true
+		}
+	})
+	return found
+}
+
 // handleExistingClaudeDirectory checks if .claude exists and handles user choice
 func handleExistingClaudeDirectory(projectDir, claudeDir string) (proceed bool, err error) {
 	// Silent merge: always proceed with setup
@@ -507,7 +518,23 @@ You are working within an active Claudex session. ALL documentation, plans, and 
 }
 
 func main() {
+	// Load config file (before flag.Parse)
+	config, err := loadConfig()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to load config: %v\n", err)
+		config = &Config{Doc: []string{}, NoOverwrite: false}
+	}
+
 	flag.Parse()
+
+	// Apply precedence: CLI flags > config > defaults
+	if !isFlagSet("doc") && len(config.Doc) > 0 {
+		docPaths = config.Doc
+	}
+	if !isFlagSet("no-overwrite") && config.NoOverwrite {
+		*noOverwrite = config.NoOverwrite
+	}
+
 	projectDir, err := os.Getwd()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -809,6 +836,9 @@ func main() {
 		// Construct relative session path for activation command
 		relativeSessionPath := filepath.Join("sessions", filepath.Base(fm.sessionPath))
 		activationPrompt := fmt.Sprintf("/agents:team-lead activate in session %s", relativeSessionPath)
+		if len(docPaths) > 0 {
+			activationPrompt += fmt.Sprintf(" with documentation %s", strings.Join(docPaths, ", "))
+		}
 
 		// Launch the Claude session with activation command
 		launchCmd := exec.Command("claude", "--session-id", claudeSessionID, activationPrompt)
@@ -864,6 +894,9 @@ func main() {
 			// For fork, start a new session with activation command
 			relativeSessionPath := filepath.Join("sessions", filepath.Base(fm.sessionPath))
 			activationPrompt := fmt.Sprintf("/agents:team-lead activate in session %s", relativeSessionPath)
+			if len(docPaths) > 0 {
+				activationPrompt += fmt.Sprintf(" with documentation %s", strings.Join(docPaths, ", "))
+			}
 
 			launchCmd := exec.Command("claude", "--session-id", claudeSessionID, activationPrompt)
 			launchCmd.Stdin = os.Stdin
@@ -934,6 +967,9 @@ func main() {
 		// Construct relative session path for activation command
 		relativeSessionPath := filepath.Join("sessions", filepath.Base(newSessionPath))
 		activationPrompt := fmt.Sprintf("/agents:team-lead activate in session %s", relativeSessionPath)
+		if len(docPaths) > 0 {
+			activationPrompt += fmt.Sprintf(" with documentation %s", strings.Join(docPaths, ", "))
+		}
 
 		// Launch the Claude session with activation command
 		launchCmd := exec.Command("claude", "--session-id", claudeSessionID, activationPrompt)
