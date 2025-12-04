@@ -3,7 +3,7 @@ sessions/
 .claude/
 !src/.claude/
 roadmap.md
-claudex
+/claudex
 docs/
 playground/
 logs/
