@@ -4,3 +4,6 @@ sessions/
 !src/.claude/
 roadmap.md
 claudex
+docs/
+playground/
+logs/
