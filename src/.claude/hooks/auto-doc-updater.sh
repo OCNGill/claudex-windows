@@ -26,6 +26,19 @@ log_message() {
     echo "$timestamp | [hook_auto_doc_updater] $1" >> "$LOG_FILE"
 }
 
+# Output JSON response and exit
+output_and_exit() {
+    cat <<EOF
+{
+  "hookSpecificOutput": {
+    "hookEventName": "PostToolUse",
+    "permissionDecision": "allow"
+  }
+}
+EOF
+    exit 0
+}
+
 # Start logging for this invocation
 echo "===========================================================" >> "$LOG_FILE"
 log_message "Hook triggered"
@@ -33,7 +46,7 @@ log_message "Hook triggered"
 # Recursion Guard: Prevent hook from triggering itself if we call Claude internally
 if [ "${CLAUDE_HOOK_INTERNAL:-}" == "1" ]; then
     log_message "Recursion detected (CLAUDE_HOOK_INTERNAL=1). Exiting."
-    exit 0
+    output_and_exit
 fi
 
 # Read JSON input from stdin
@@ -45,7 +58,7 @@ TRANSCRIPT_PATH=$(echo "$INPUT_JSON" | jq -r '.transcript_path // ""')
 
 if [ -z "$SESSION_ID" ]; then
     log_message "No session ID found. Exiting."
-    exit 0
+    output_and_exit
 fi
 
 # Determine Session Folder
@@ -61,7 +74,7 @@ else
         SESSION_FOLDER="${SESSION_FOLDERS[0]}"
     else
         log_message "Could not locate session folder for ID: $SESSION_ID"
-        exit 0
+        output_and_exit
     fi
 fi
 
@@ -84,7 +97,7 @@ if [ "$NEW_COUNT" -lt "$UPDATE_FREQUENCY" ]; then
     # Update counter and exit
     echo "$NEW_COUNT" > "$COUNTER_FILE"
     log_message "Threshold not reached. Exiting."
-    exit 0
+    output_and_exit
 fi
 
 # Reset counter
@@ -93,7 +106,7 @@ log_message "Threshold reached. Starting documentation update..."
 
 if [ ! -f "$TRANSCRIPT_PATH" ]; then
     log_message "Transcript file not found: $TRANSCRIPT_PATH"
-    exit 0
+    output_and_exit
 fi
 
 # Determine where to start reading the transcript
@@ -108,7 +121,7 @@ TOTAL_LINES=$(wc -l < "$TRANSCRIPT_PATH")
 
 if [ "$START_LINE" -gt "$TOTAL_LINES" ]; then
     log_message "No new lines in transcript. Exiting."
-    exit 0
+    output_and_exit
 fi
 
 log_message "Processing transcript lines $START_LINE to $TOTAL_LINES"

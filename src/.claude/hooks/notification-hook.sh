@@ -33,13 +33,26 @@ log_message() {
     echo "$timestamp | [hook_notification] $1" >> "$LOG_FILE"
 }
 
+# Output JSON response and exit
+output_and_exit() {
+    cat <<EOF
+{
+  "hookSpecificOutput": {
+    "hookEventName": "Notification",
+    "permissionDecision": "allow"
+  }
+}
+EOF
+    exit 0
+}
+
 echo "===========================================================" >> "$LOG_FILE"
 log_message "Hook triggered (Notification)"
 
 # === RECURSION GUARD ===
 if [ "$CLAUDE_HOOK_INTERNAL" == "1" ]; then
     log_message "Recursion detected (CLAUDE_HOOK_INTERNAL=1). Exiting."
-    exit 0
+    output_and_exit
 fi
 
 # === PARSE INPUT ===
@@ -119,8 +132,20 @@ if [ -f "$NOTIFICATION_LIB" ]; then
     fi
 else
     log_message "ERROR: Notification library not found: $NOTIFICATION_LIB"
-    exit 1
+    # Even on error, output JSON to prevent hook error message
+    output_and_exit
 fi
 
 log_message "Hook completed successfully"
+
+# Always allow the notification to proceed
+cat <<EOF
+{
+  "hookSpecificOutput": {
+    "hookEventName": "Notification",
+    "permissionDecision": "allow"
+  }
+}
+EOF
+
 exit 0

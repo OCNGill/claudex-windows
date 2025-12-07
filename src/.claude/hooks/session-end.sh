@@ -23,13 +23,26 @@ log_message() {
     echo "$timestamp | [hook_session_end] $1" >> "$LOG_FILE"
 }
 
+# Output JSON response and exit
+output_and_exit() {
+    cat <<EOF
+{
+  "hookSpecificOutput": {
+    "hookEventName": "SessionEnd",
+    "permissionDecision": "allow"
+  }
+}
+EOF
+    exit 0
+}
+
 echo "===========================================================" >> "$LOG_FILE"
 log_message "Hook triggered (SessionEnd)"
 
 # Recursion Guard: Prevent hook from triggering itself
 if [ "$CLAUDE_HOOK_INTERNAL" == "1" ]; then
     log_message "Recursion detected (CLAUDE_HOOK_INTERNAL=1). Exiting."
-    exit 0
+    output_and_exit
 fi
 
 # Read JSON input from stdin
@@ -47,7 +60,7 @@ log_message "CLAUDEX_SESSION_PATH: $CLAUDEX_SESSION_PATH"
 
 if [ -z "$SESSION_ID" ] || [ -z "$TRANSCRIPT_PATH" ]; then
     log_message "Missing session_id or transcript_path. Exiting."
-    exit 0
+    output_and_exit
 fi
 
 # Find session folder
@@ -73,7 +86,7 @@ else
             log_message "Found session folder via script path: $SESSION_FOLDER"
         else
             log_message "No session folder found. Exiting."
-            exit 0
+            output_and_exit
         fi
     fi
 fi
@@ -82,7 +95,7 @@ log_message "Session Folder: $SESSION_FOLDER"
 
 if [ ! -f "$TRANSCRIPT_PATH" ]; then
     log_message "Transcript file not found: $TRANSCRIPT_PATH"
-    exit 0
+    output_and_exit
 fi
 
 # ---------------------------------------------------------
@@ -185,4 +198,15 @@ disown
 
 log_message "Session overview documentation update dispatched in background"
 log_message "Main script exiting"
+
+# Always allow the original session end to proceed
+cat <<EOF
+{
+  "hookSpecificOutput": {
+    "hookEventName": "SessionEnd",
+    "permissionDecision": "allow"
+  }
+}
+EOF
+
 exit 0
