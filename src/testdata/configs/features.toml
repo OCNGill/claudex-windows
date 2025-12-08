@@ -1,0 +1,7 @@
+# Test configuration file for feature toggles
+# Used by config_test.go to verify feature parsing
+
+[features]
+autodoc_session_progress = false
+autodoc_session_end = true
+autodoc_frequency = 10
