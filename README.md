@@ -86,6 +86,14 @@ Work gets broken into independent tracks. Multiple engineers execute simultaneou
 - [Go 1.21+](https://go.dev/dl/)
 - [Claude CLI](https://docs.anthropic.com/claude-code)
 
+### Recommended MCPs
+
+| MCP | Description |
+|-----|-------------|
+| [Sequential Thinking](https://github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking) | Structured reasoning through complex problems step-by-step |
+| [Context7](https://github.com/upstash/context7) | Up-to-date documentation lookup for libraries and frameworks |
+
+
 ## Quick Start
 
 ```bash
