@@ -1,5 +1,7 @@
 # Claudex
 
+The Claude Experience you wish you had.
+
 ## Features
 
 ### 🗂️ Persistent Sessions
@@ -38,6 +40,8 @@ A background agent silently maintains `session-overview.md` as you work—no man
 │  Leverage full claude's potential                                     │
 └───────────────────────────────────────────────────────────────────────┘
 ```
+
+Example of auto-maintained `session-overview.md`:
 
 ```markdown
 # Session: API Refactor
