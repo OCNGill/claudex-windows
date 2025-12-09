@@ -79,6 +79,8 @@ A team-lead agent coordinates specialists through a structured workflow:
 └─────────────────────────────────────────────────────┘
 ```
 
+![Parallel Agent Execution](assets/agents-parallel-exec.png)
+
 Work gets broken into independent tracks. Multiple engineers execute simultaneously: divide-and-conquer.
 
 ## Prerequisites
