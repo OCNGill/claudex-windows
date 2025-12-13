@@ -85,6 +85,7 @@ func Test_Execute_CreatesStructure(t *testing.T) {
 
 // Test_Execute_RespectsNoOverwrite verifies that existing files
 // are preserved when noOverwrite=true, and new files from config are not copied.
+// Settings are always merged to add missing hooks while preserving customizations.
 func Test_Execute_RespectsNoOverwrite(t *testing.T) {
 	// Setup
 	h := testutil.NewTestHarness()
@@ -99,12 +100,33 @@ func Test_Execute_RespectsNoOverwrite(t *testing.T) {
 		"hooks/notification-hook.sh":    "#!/bin/bash\necho notify",
 	})
 
-	// Create existing .claude directory with custom agent
+	// Create existing .claude directory with custom agent and settings
 	h.CreateDir("/project/.claude/agents")
 	h.CreateDir("/project/.claude/commands/agents")
 	h.WriteFile("/project/.claude/agents/custom-agent.md", "# My Custom Agent\nCustom content here")
 	h.WriteFile("/project/.claude/agents/team-lead.md.md", "# Old Team Lead\nOld content")
-	h.WriteFile("/project/.claude/settings.local.json", `{"existing": "settings"}`)
+
+	// Create existing settings with custom permissions and a custom hook
+	existingSettings := `{
+  "permissions": {
+    "allow": ["Bash(custom:*)"],
+    "deny": ["Write"],
+    "ask": []
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/my-custom-hook.sh"
+          }
+        ]
+      }
+    ]
+  }
+}`
+	h.WriteFile("/project/.claude/settings.local.json", existingSettings)
 
 	// Create project with package.json
 	h.WriteFile("/project/package.json", `{"name": "test"}`)
@@ -125,8 +147,19 @@ func Test_Execute_RespectsNoOverwrite(t *testing.T) {
 	testutil.AssertFileContains(t, h.FS, "/project/.claude/agents/team-lead.md.md", "Old Team Lead")
 	testutil.AssertFileContains(t, h.FS, "/project/.claude/agents/team-lead.md.md", "Old content")
 
-	// Verify - existing settings.local.json preserved
-	testutil.AssertFileContains(t, h.FS, "/project/.claude/settings.local.json", `{"existing": "settings"}`)
+	// Verify - settings merged: custom permissions preserved
+	testutil.AssertFileContains(t, h.FS, "/project/.claude/settings.local.json", `"allow": [`)
+	testutil.AssertFileContains(t, h.FS, "/project/.claude/settings.local.json", `"Bash(custom:*)"`)
+	testutil.AssertFileContains(t, h.FS, "/project/.claude/settings.local.json", `"deny": [`)
+	testutil.AssertFileContains(t, h.FS, "/project/.claude/settings.local.json", `"Write"`)
+
+	// Verify - settings merged: custom hook preserved
+	testutil.AssertFileContains(t, h.FS, "/project/.claude/settings.local.json", "my-custom-hook.sh")
+
+	// Verify - settings merged: template hooks added
+	testutil.AssertFileContains(t, h.FS, "/project/.claude/settings.local.json", "notification-hook.sh")
+	testutil.AssertFileContains(t, h.FS, "/project/.claude/settings.local.json", "session-end.sh")
+	testutil.AssertFileContains(t, h.FS, "/project/.claude/settings.local.json", "Notification")
 
 	// Verify - architect agent NOT copied (noOverwrite prevents new files from being written if any exist)
 	// Note: Based on the implementation, noOverwrite only prevents overwriting existing files,

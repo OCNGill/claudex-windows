@@ -10,8 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"claudex"
 	"claudex/internal/services/env"
 	"claudex/internal/services/filesystem"
+	"claudex/internal/services/settings"
 	"claudex/internal/services/stackdetect"
 
 	"github.com/spf13/afero"
@@ -185,83 +187,30 @@ func (uc *SetupUseCase) writeFileIfNeeded(path string, content []byte, noOverwri
 }
 
 // generateSettings creates the settings.local.json file with hooks configuration
+// using the embedded template. If a settings file already exists, it merges
+// missing hooks while preserving user customizations.
 func (uc *SetupUseCase) generateSettings(claudeDir string, noOverwrite bool) error {
 	settingsPath := filepath.Join(claudeDir, "settings.local.json")
-	settingsContent := `{
-  "permissions": {
-    "allow": [],
-    "deny": [],
-    "ask": []
-  },
-  "hooks": {
-    "Notification": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".claude/hooks/notification-hook.sh"
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".claude/hooks/session-end.sh"
-          }
-        ]
-      }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".claude/hooks/subagent-stop.sh"
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "^(?!AskUserQuestion$).*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".claude/hooks/pre-tool-use.sh"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".claude/hooks/post-tool-use.sh"
-          },
-          {
-            "type": "command",
-            "command": ".claude/hooks/auto-doc-updater.sh"
-          }
-        ]
-      }
-    ]
-  }
-}
-`
 
-	// Check if noOverwrite and file exists
-	if noOverwrite {
-		if _, err := uc.fs.Stat(settingsPath); err == nil {
-			// File exists, skip writing
-			return nil
-		}
+	// Check if file exists
+	existingContent, err := afero.ReadFile(uc.fs, settingsPath)
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to read existing settings: %w", err)
 	}
 
-	return afero.WriteFile(uc.fs, settingsPath, []byte(settingsContent), 0644)
+	var finalContent []byte
+	if len(existingContent) > 0 {
+		// Merge: add missing hooks, preserve user config
+		finalContent, err = settings.MergeSettings(claudex.SettingsTemplate, existingContent)
+		if err != nil {
+			return fmt.Errorf("failed to merge settings: %w", err)
+		}
+	} else {
+		// No existing file, use template directly
+		finalContent = claudex.SettingsTemplate
+	}
+
+	return afero.WriteFile(uc.fs, settingsPath, finalContent, 0644)
 }
 
 // createEngineerAlias creates a principal-engineer.md alias from the primary stack

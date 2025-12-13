@@ -7,6 +7,16 @@
     "ask": []
   },
   "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/notification-hook.sh"
+          }
+        ]
+      }
+    ],
     "SessionEnd": [
       {
         "hooks": [
@@ -48,6 +58,10 @@
           {
             "type": "command",
             "command": ".claude/hooks/auto-doc-updater.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/index-updater.sh"
           }
         ]
       }
