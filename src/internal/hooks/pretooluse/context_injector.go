@@ -2,6 +2,8 @@ package pretooluse
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -91,7 +93,7 @@ func (h *Handler) Handle(input *shared.PreToolUseInput) (*shared.HookOutput, err
 	}
 
 	// Build session context
-	sessionContext, err := h.buildSessionContext(sessionPath, docPaths)
+	sessionContext, err := h.buildSessionContext(sessionPath, docPaths, input.CWD)
 	if err != nil {
 		if h.logger != nil {
 			_ = h.logger.LogError(fmt.Errorf("failed to build session context: %w", err))
@@ -129,7 +131,7 @@ func (h *Handler) Handle(input *shared.PreToolUseInput) (*shared.HookOutput, err
 }
 
 // buildSessionContext creates the markdown context block
-func (h *Handler) buildSessionContext(sessionPath string, docPaths []string) (string, error) {
+func (h *Handler) buildSessionContext(sessionPath string, docPaths []string, projectRoot string) (string, error) {
 	var sb strings.Builder
 
 	// Header
@@ -146,19 +148,37 @@ func (h *Handler) buildSessionContext(sessionPath string, docPaths []string) (st
 	sb.WriteString("4. ❌ NEVER save documentation to project root or arbitrary locations\n")
 	sb.WriteString("5. ❌ NEVER use relative paths for documentation files\n\n")
 
-	// List session folder contents
-	files, err := h.listSessionFiles(sessionPath)
+	// Check for session-overview.md - if exists, use pointer; otherwise fallback to enumeration
+	overviewPath := filepath.Join(sessionPath, "session-overview.md")
+	overviewExists, err := afero.Exists(h.fs, overviewPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to list session files: %w", err)
+		return "", fmt.Errorf("failed to check for session-overview.md: %w", err)
 	}
 
 	sb.WriteString("### Session Folder Contents:\n")
-	if len(files) == 0 {
-		sb.WriteString("(empty)\n")
+	if overviewExists {
+		// Pointer-based approach: just reference the overview file
+		sb.WriteString(fmt.Sprintf("- %s\n", overviewPath))
 	} else {
-		for _, file := range files {
-			sb.WriteString(fmt.Sprintf("- %s\n", file))
+		// Fallback to file enumeration for backward compatibility
+		files, err := h.listSessionFiles(sessionPath)
+		if err != nil {
+			return "", fmt.Errorf("failed to list session files: %w", err)
 		}
+
+		if len(files) == 0 {
+			sb.WriteString("(empty)\n")
+		} else {
+			for _, file := range files {
+				sb.WriteString(fmt.Sprintf("- %s\n", file))
+			}
+		}
+	}
+
+	// Add index.md hint if project contains index.md files
+	if h.hasIndexMdFiles(projectRoot) {
+		sb.WriteString("\n### Codebase Navigation:\n")
+		sb.WriteString("This project contains index.md files. Use them for quick codebase understanding instead of extensive Glob/Grep searches.\n")
 	}
 
 	// Add doc paths if present
@@ -194,6 +214,34 @@ func (h *Handler) listSessionFiles(sessionPath string) ([]string, error) {
 	sort.Strings(files)
 
 	return files, nil
+}
+
+// hasIndexMdFiles checks if any index.md files exist in the project directory tree
+func (h *Handler) hasIndexMdFiles(projectRoot string) bool {
+	// Empty project root - graceful degradation
+	if projectRoot == "" {
+		return false
+	}
+
+	// Use afero.Walk to traverse directory tree
+	found := false
+	afero.Walk(h.fs, projectRoot, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			// Continue walking even if we encounter errors
+			return nil
+		}
+
+		// Check if this is an index.md file
+		if !info.IsDir() && info.Name() == "index.md" {
+			found = true
+			// Early exit - we found one
+			return filepath.SkipDir
+		}
+
+		return nil
+	})
+
+	return found
 }
 
 // HandleFromBuilder is a convenience wrapper that returns the built output

@@ -434,7 +434,7 @@ func TestBuildSessionContext(t *testing.T) {
 	docPaths := []string{"research-{topic}.md", "execution-plan-{feature}.md"}
 
 	// Act
-	context, err := handler.buildSessionContext(sessionPath, docPaths)
+	context, err := handler.buildSessionContext(sessionPath, docPaths, "")
 
 	// Assert
 	require.NoError(t, err)
@@ -498,4 +498,181 @@ func TestListSessionFiles_NonexistentDirectory(t *testing.T) {
 	// Assert
 	assert.Error(t, err)
 	assert.Nil(t, files)
+}
+
+func TestBuildSessionContext_WithOverview(t *testing.T) {
+	// Arrange
+	fs := afero.NewMemMapFs()
+	env := shared.NewMockEnv()
+
+	sessionPath := "/workspace/sessions/test-session"
+	err := fs.MkdirAll(sessionPath, 0755)
+	require.NoError(t, err)
+
+	// Create session-overview.md and other files
+	afero.WriteFile(fs, sessionPath+"/session-overview.md", []byte("overview content"), 0644)
+	afero.WriteFile(fs, sessionPath+"/other-file.md", []byte("content"), 0644)
+	afero.WriteFile(fs, sessionPath+"/another-file.md", []byte("content"), 0644)
+
+	logger := shared.NewLogger(fs, env, "test")
+	handler := NewHandler(fs, env, logger)
+
+	// Act
+	context, err := handler.buildSessionContext(sessionPath, nil, "")
+
+	// Assert
+	require.NoError(t, err)
+	assert.Contains(t, context, "### Session Folder Contents:")
+	// Should contain absolute path to session-overview.md
+	assert.Contains(t, context, sessionPath+"/session-overview.md")
+	// Should NOT contain other file names (pointer-based approach)
+	assert.NotContains(t, context, "- other-file.md")
+	assert.NotContains(t, context, "- another-file.md")
+}
+
+func TestBuildSessionContext_WithoutOverview(t *testing.T) {
+	// Arrange
+	fs := afero.NewMemMapFs()
+	env := shared.NewMockEnv()
+
+	sessionPath := "/workspace/sessions/test-session"
+	err := fs.MkdirAll(sessionPath, 0755)
+	require.NoError(t, err)
+
+	// Create files WITHOUT session-overview.md
+	afero.WriteFile(fs, sessionPath+"/file1.md", []byte("content"), 0644)
+	afero.WriteFile(fs, sessionPath+"/file2.md", []byte("content"), 0644)
+
+	logger := shared.NewLogger(fs, env, "test")
+	handler := NewHandler(fs, env, logger)
+
+	// Act
+	context, err := handler.buildSessionContext(sessionPath, nil, "")
+
+	// Assert
+	require.NoError(t, err)
+	assert.Contains(t, context, "### Session Folder Contents:")
+	// Should fallback to file enumeration (filenames only, not full paths)
+	assert.Contains(t, context, "- file1.md")
+	assert.Contains(t, context, "- file2.md")
+	// Should NOT contain absolute paths (fallback mode)
+	assert.NotContains(t, context, sessionPath+"/file1.md")
+}
+
+func TestBuildSessionContext_WithIndexMdHint(t *testing.T) {
+	// Arrange
+	fs := afero.NewMemMapFs()
+	env := shared.NewMockEnv()
+
+	sessionPath := "/workspace/sessions/test-session"
+	projectRoot := "/workspace/project"
+
+	err := fs.MkdirAll(sessionPath, 0755)
+	require.NoError(t, err)
+
+	// Create project structure with nested index.md
+	err = fs.MkdirAll(projectRoot+"/src/internal", 0755)
+	require.NoError(t, err)
+	afero.WriteFile(fs, projectRoot+"/src/internal/index.md", []byte("index content"), 0644)
+
+	logger := shared.NewLogger(fs, env, "test")
+	handler := NewHandler(fs, env, logger)
+
+	// Act
+	context, err := handler.buildSessionContext(sessionPath, nil, projectRoot)
+
+	// Assert
+	require.NoError(t, err)
+	assert.Contains(t, context, "### Codebase Navigation:")
+	assert.Contains(t, context, "This project contains index.md files")
+	assert.Contains(t, context, "Use them for quick codebase understanding instead of extensive Glob/Grep searches")
+}
+
+func TestBuildSessionContext_NoIndexMdHint(t *testing.T) {
+	// Arrange
+	fs := afero.NewMemMapFs()
+	env := shared.NewMockEnv()
+
+	sessionPath := "/workspace/sessions/test-session"
+	projectRoot := "/workspace/project"
+
+	err := fs.MkdirAll(sessionPath, 0755)
+	require.NoError(t, err)
+
+	// Create project structure WITHOUT any index.md files
+	err = fs.MkdirAll(projectRoot+"/src/internal", 0755)
+	require.NoError(t, err)
+	afero.WriteFile(fs, projectRoot+"/src/main.go", []byte("code"), 0644)
+
+	logger := shared.NewLogger(fs, env, "test")
+	handler := NewHandler(fs, env, logger)
+
+	// Act
+	context, err := handler.buildSessionContext(sessionPath, nil, projectRoot)
+
+	// Assert
+	require.NoError(t, err)
+	assert.NotContains(t, context, "### Codebase Navigation:")
+	assert.NotContains(t, context, "index.md files")
+}
+
+func TestHasIndexMdFiles_Found(t *testing.T) {
+	// Arrange
+	fs := afero.NewMemMapFs()
+	env := shared.NewMockEnv()
+
+	projectRoot := "/workspace/project"
+	err := fs.MkdirAll(projectRoot+"/src/internal/hooks", 0755)
+	require.NoError(t, err)
+
+	// Create nested index.md file
+	afero.WriteFile(fs, projectRoot+"/src/internal/hooks/index.md", []byte("content"), 0644)
+	afero.WriteFile(fs, projectRoot+"/src/main.go", []byte("code"), 0644)
+
+	logger := shared.NewLogger(fs, env, "test")
+	handler := NewHandler(fs, env, logger)
+
+	// Act
+	found := handler.hasIndexMdFiles(projectRoot)
+
+	// Assert
+	assert.True(t, found)
+}
+
+func TestHasIndexMdFiles_NotFound(t *testing.T) {
+	// Arrange
+	fs := afero.NewMemMapFs()
+	env := shared.NewMockEnv()
+
+	projectRoot := "/workspace/project"
+	err := fs.MkdirAll(projectRoot+"/src/internal", 0755)
+	require.NoError(t, err)
+
+	// Create files but NO index.md
+	afero.WriteFile(fs, projectRoot+"/src/main.go", []byte("code"), 0644)
+	afero.WriteFile(fs, projectRoot+"/README.md", []byte("readme"), 0644)
+
+	logger := shared.NewLogger(fs, env, "test")
+	handler := NewHandler(fs, env, logger)
+
+	// Act
+	found := handler.hasIndexMdFiles(projectRoot)
+
+	// Assert
+	assert.False(t, found)
+}
+
+func TestHasIndexMdFiles_EmptyProjectRoot(t *testing.T) {
+	// Arrange
+	fs := afero.NewMemMapFs()
+	env := shared.NewMockEnv()
+
+	logger := shared.NewLogger(fs, env, "test")
+	handler := NewHandler(fs, env, logger)
+
+	// Act
+	found := handler.hasIndexMdFiles("")
+
+	// Assert
+	assert.False(t, found, "Empty project root should return false for graceful degradation")
 }
