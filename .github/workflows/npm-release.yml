@@ -1,0 +1,42 @@
+name: npm Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Build all platforms
+        run: make npm-package
+
+      - name: Set version from tag
+        run: echo "${GITHUB_REF#refs/tags/v}" > npm/version.txt
+
+      - name: Sync versions
+        run: make npm-sync-version
+
+      - name: Publish to npm
+        run: |
+          cd npm/@claudex/darwin-arm64 && npm publish --access public
+          cd ../darwin-x64 && npm publish --access public
+          cd ../linux-x64 && npm publish --access public
+          cd ../linux-arm64 && npm publish --access public
+          cd ../../claudex && npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

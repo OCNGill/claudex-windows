@@ -9,3 +9,9 @@ logs/
 src/claudex
 src/claudex-hooks
 bin/
+
+# npm build artifacts
+dist/
+npm/@claudex/*/bin/
+!npm/claudex/bin/
+*.tgz

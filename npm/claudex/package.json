@@ -1,0 +1,37 @@
+{
+  "name": "claudex",
+  "version": "0.1.0",
+  "description": "Claude Experience - Session manager for Claude CLI with persistent sessions and agent orchestration",
+  "bin": {
+    "claudex": "bin/claudex",
+    "claudex-hooks": "bin/claudex-hooks"
+  },
+  "optionalDependencies": {
+    "@claudex/darwin-arm64": "0.1.0",
+    "@claudex/darwin-x64": "0.1.0",
+    "@claudex/linux-x64": "0.1.0",
+    "@claudex/linux-arm64": "0.1.0"
+  },
+  "scripts": {
+    "postinstall": "node postinstall.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mgonzalezbaile/claudex"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=14"
+  },
+  "keywords": [
+    "claude",
+    "ai",
+    "cli",
+    "session-manager",
+    "agent-orchestration"
+  ],
+  "files": [
+    "bin/",
+    "postinstall.js"
+  ]
+}

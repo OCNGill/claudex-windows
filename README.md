@@ -120,7 +120,8 @@ Work gets broken into independent tracks. Multiple engineers execute simultaneou
 
 - **Claude Pro, Max, or Team subscription** — Required for Claude Code access
 - [Claude Code CLI](https://docs.anthropic.com/claude-code) — Install via `npm install -g @anthropic-ai/claude-code`
-- [Go 1.21+](https://go.dev/dl/) — For building claudex
+- [Node.js 14+](https://nodejs.org/) — For npm installation
+- [Go 1.21+](https://go.dev/dl/) — Only needed if building from source
 
 ### Recommended MCPs
 
@@ -133,11 +134,21 @@ On first run, claudex will prompt you to install these recommended MCPs for the 
 
 You can also configure them manually anytime with `claudex --setup-mcp` or `make install-mcp`.
 
-## Quick Start
+## Installation
+
+### npm (Recommended)
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/claudex.git
-cd claudex/claudex
+npm install -g claudex
+```
+
+This works on macOS and Linux without needing to clone the repository.
+
+### From Source
+
+```bash
+git clone https://github.com/mgonzalezbaile/claudex.git
+cd claudex
 make install
 ```
 

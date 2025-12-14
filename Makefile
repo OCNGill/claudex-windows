@@ -105,6 +105,51 @@ clean:
 run: build
 	@./claudex
 
+# npm packaging targets
+NPM_PLATFORMS := darwin-arm64 darwin-amd64 linux-amd64 linux-arm64
+
+.PHONY: npm-build npm-package npm-clean npm-sync-version npm-publish
+
+npm-build: $(addprefix npm-build-,$(NPM_PLATFORMS))
+
+npm-build-darwin-arm64:
+	@echo "Building for darwin-arm64..."
+	@mkdir -p dist/darwin-arm64
+	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -C src -ldflags "-X main.Version=$(VERSION)" -o ../dist/darwin-arm64/claudex ./cmd/claudex
+	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -C src -o ../dist/darwin-arm64/claudex-hooks ./cmd/claudex-hooks
+
+npm-build-darwin-amd64:
+	@echo "Building for darwin-amd64..."
+	@mkdir -p dist/darwin-x64
+	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -C src -ldflags "-X main.Version=$(VERSION)" -o ../dist/darwin-x64/claudex ./cmd/claudex
+	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -C src -o ../dist/darwin-x64/claudex-hooks ./cmd/claudex-hooks
+
+npm-build-linux-amd64:
+	@echo "Building for linux-amd64..."
+	@mkdir -p dist/linux-x64
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -C src -ldflags "-X main.Version=$(VERSION)" -o ../dist/linux-x64/claudex ./cmd/claudex
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -C src -o ../dist/linux-x64/claudex-hooks ./cmd/claudex-hooks
+
+npm-build-linux-arm64:
+	@echo "Building for linux-arm64..."
+	@mkdir -p dist/linux-arm64
+	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -C src -ldflags "-X main.Version=$(VERSION)" -o ../dist/linux-arm64/claudex ./cmd/claudex
+	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -C src -o ../dist/linux-arm64/claudex-hooks ./cmd/claudex-hooks
+
+npm-package: npm-build
+	@echo "Assembling npm packages..."
+	./npm/scripts/assemble.sh
+
+npm-sync-version:
+	./npm/scripts/sync-version.sh
+
+npm-publish: npm-package npm-sync-version
+	./npm/scripts/publish.sh
+
+npm-clean:
+	rm -rf dist/
+	rm -rf npm/@claudex/*/bin/*
+
 # Show help
 help:
 	@echo "Available targets:"
@@ -120,4 +165,9 @@ help:
 	@echo "  make install-project - Install profiles/hooks to current project .claude/"
 	@echo "  make clean           - Remove build artifacts"
 	@echo "  make run             - Build and run"
+	@echo "  make npm-build       - Cross-compile binaries for all npm platforms"
+	@echo "  make npm-package     - Build and assemble npm packages"
+	@echo "  make npm-sync-version - Sync version from version.txt to all package.json files"
+	@echo "  make npm-publish     - Build, sync versions, and publish to npm"
+	@echo "  make npm-clean       - Remove npm build artifacts"
 	@echo "  make help            - Show this help"

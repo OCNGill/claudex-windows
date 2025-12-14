@@ -1,0 +1,19 @@
+{
+  "name": "@claudex/linux-x64",
+  "version": "0.1.0",
+  "description": "claudex binaries for Linux x64",
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "files": [
+    "bin/"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maikel/claudex"
+  },
+  "license": "MIT"
+}

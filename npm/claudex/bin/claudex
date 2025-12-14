@@ -1,0 +1,25 @@
+#!/bin/sh
+# Wrapper script for claudex binary
+# This script finds and executes the platform-specific claudex binary
+
+basedir=$(dirname "$(readlink -f "$0" 2>/dev/null || realpath "$0" 2>/dev/null || echo "$0")")
+
+# Get platform identifier
+platform=$(node -p "process.platform + '-' + process.arch" 2>/dev/null)
+
+if [ -z "$platform" ]; then
+  echo "Error: Node.js is required to detect platform" >&2
+  exit 1
+fi
+
+# Find the binary in node_modules
+binary="$basedir/../node_modules/@claudex/$platform/bin/claudex"
+
+if [ -f "$binary" ]; then
+  exec "$binary" "$@"
+else
+  echo "Error: Could not find claudex binary for your platform" >&2
+  echo "Platform: $platform" >&2
+  echo "Expected: $binary" >&2
+  exit 1
+fi

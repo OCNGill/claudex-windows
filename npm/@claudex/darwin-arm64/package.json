@@ -1,0 +1,19 @@
+{
+  "name": "@claudex/darwin-arm64",
+  "version": "0.1.0",
+  "description": "claudex binaries for macOS ARM64",
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "files": [
+    "bin/"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maikel/claudex"
+  },
+  "license": "MIT"
+}
