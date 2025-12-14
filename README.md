@@ -60,6 +60,35 @@ Phase 2 in progress - Authentication endpoints complete
 
 Pick up any session instantly—even weeks later. Claude reads the overview, follows the pointers, and catches up in seconds.
 
+### 📚 Auto-Updating Index Files
+
+Keep your codebase documentation current automatically. On first run in a git repo, claudex offers to install a post-commit hook:
+
+```
+📝 Enable auto-docs update after git commits? [y/n/never]:
+```
+
+When enabled, after each commit:
+1. Detects which files changed
+2. Identifies affected `index.md` files
+3. Spawns Claude (Haiku) to intelligently update them
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  git commit                                                      │
+│       ↓                                                          │
+│  Post-commit hook triggers claudex --update-docs                 │
+│       ↓                                                          │
+│  Claude reads existing index.md, explores surrounding context    │
+│       ↓                                                          │
+│  Makes thoughtful updates to keep docs relevant                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Manual trigger:** `claudex --update-docs`
+
+**Skip for a commit:** `CLAUDEX_SKIP_DOCS=1 git commit -m "quick fix"`
+
 ### 🤖 Parallel Agent Orchestration
 
 A team-lead agent coordinates specialists through a structured workflow:
