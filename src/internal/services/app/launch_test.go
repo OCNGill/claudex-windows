@@ -22,7 +22,7 @@ func TestLaunchEphemeral_NoDirectoryCreated(t *testing.T) {
 	h.UUIDs = []string{"ephemeral-uuid-1111-2222-3333-444444444444"}
 
 	projectDir := "/project"
-	sessionsDir := filepath.Join(projectDir, "sessions")
+	sessionsDir := filepath.Join(projectDir, ".claudex", "sessions")
 	h.CreateDir(sessionsDir)
 
 	// Create app with mocked dependencies
@@ -72,7 +72,7 @@ func TestLaunchEphemeral_NoActivationPrompt(t *testing.T) {
 	h.UUIDs = []string{"ephemeral-uuid-aaaa-bbbb-cccc-dddddddddddd"}
 
 	projectDir := "/project"
-	sessionsDir := filepath.Join(projectDir, "sessions")
+	sessionsDir := filepath.Join(projectDir, ".claudex", "sessions")
 	h.CreateDir(sessionsDir)
 
 	// Create app with mocked dependencies
@@ -133,7 +133,7 @@ func TestLaunchEphemeral_GeneratesUUID(t *testing.T) {
 	h.UUIDs = []string{expectedUUID}
 
 	projectDir := "/project"
-	sessionsDir := filepath.Join(projectDir, "sessions")
+	sessionsDir := filepath.Join(projectDir, ".claudex", "sessions")
 	h.CreateDir(sessionsDir)
 
 	// Create app with mocked dependencies
@@ -184,7 +184,7 @@ func TestLaunchEphemeral_CorrectEnvironment(t *testing.T) {
 	h.UUIDs = []string{"env-test-uuid-1111-2222-3333-444444444444"}
 
 	projectDir := "/project"
-	sessionsDir := filepath.Join(projectDir, "sessions")
+	sessionsDir := filepath.Join(projectDir, ".claudex", "sessions")
 	h.CreateDir(sessionsDir)
 
 	// Create app with mocked dependencies
@@ -239,7 +239,7 @@ func TestLaunchEphemeral_NoSessionRename(t *testing.T) {
 	h.UUIDs = []string{"rename-test-uuid-1111-2222-3333-444444444444"}
 
 	projectDir := "/project"
-	sessionsDir := filepath.Join(projectDir, "sessions")
+	sessionsDir := filepath.Join(projectDir, ".claudex", "sessions")
 	h.CreateDir(sessionsDir)
 
 	// Pre-create a session directory that should NOT be touched
@@ -291,7 +291,7 @@ func TestLaunchEphemeral_WithDocPaths(t *testing.T) {
 	h.UUIDs = []string{"docpath-test-uuid-1111-2222-3333-444444444444"}
 
 	projectDir := "/project"
-	sessionsDir := filepath.Join(projectDir, "sessions")
+	sessionsDir := filepath.Join(projectDir, ".claudex", "sessions")
 	h.CreateDir(sessionsDir)
 
 	// Create app with doc paths configured
@@ -348,7 +348,7 @@ func TestLaunchEphemeral_NoLastUsedUpdate(t *testing.T) {
 	h.UUIDs = []string{"lastused-test-uuid-1111-2222-3333-444444444444"}
 
 	projectDir := "/project"
-	sessionsDir := filepath.Join(projectDir, "sessions")
+	sessionsDir := filepath.Join(projectDir, ".claudex", "sessions")
 	h.CreateDir(sessionsDir)
 
 	// Create app with mocked dependencies
@@ -389,7 +389,7 @@ func TestLaunchEphemeral_CompareWithLaunchNew(t *testing.T) {
 		h.UUIDs = []string{"new-session-uuid"}
 
 		projectDir := "/project"
-		sessionsDir := filepath.Join(projectDir, "sessions")
+		sessionsDir := filepath.Join(projectDir, ".claudex", "sessions")
 		sessionPath := filepath.Join(sessionsDir, "test-session-new-session-uuid")
 		h.CreateDir(sessionPath)
 
@@ -428,7 +428,7 @@ func TestLaunchEphemeral_CompareWithLaunchNew(t *testing.T) {
 		h.UUIDs = []string{"ephemeral-session-uuid"}
 
 		projectDir := "/project"
-		sessionsDir := filepath.Join(projectDir, "sessions")
+		sessionsDir := filepath.Join(projectDir, ".claudex", "sessions")
 		h.CreateDir(sessionsDir)
 
 		app := &App{
@@ -499,7 +499,7 @@ func TestSetEnvironment_FeaturesDefaults(t *testing.T) {
 
 	si := SessionInfo{
 		Name: "test-session",
-		Path: "/project/sessions/test-session",
+		Path: "/project/.claudex/sessions/test-session",
 		Mode: LaunchModeNew,
 	}
 
@@ -553,7 +553,7 @@ func TestSetEnvironment_FeaturesCustomConfig(t *testing.T) {
 
 	si := SessionInfo{
 		Name: "test-session",
-		Path: "/project/sessions/test-session",
+		Path: "/project/.claudex/sessions/test-session",
 		Mode: LaunchModeNew,
 	}
 
@@ -607,7 +607,7 @@ func TestSetEnvironment_EnvVarOverridesConfig(t *testing.T) {
 
 	si := SessionInfo{
 		Name: "test-session",
-		Path: "/project/sessions/test-session",
+		Path: "/project/.claudex/sessions/test-session",
 		Mode: LaunchModeNew,
 	}
 
@@ -661,7 +661,7 @@ func TestSetEnvironment_PartialEnvVarOverride(t *testing.T) {
 
 	si := SessionInfo{
 		Name: "test-session",
-		Path: "/project/sessions/test-session",
+		Path: "/project/.claudex/sessions/test-session",
 		Mode: LaunchModeNew,
 	}
 
@@ -712,7 +712,7 @@ func TestSetEnvironment_InvalidEnvVarValues(t *testing.T) {
 
 	si := SessionInfo{
 		Name: "test-session",
-		Path: "/project/sessions/test-session",
+		Path: "/project/.claudex/sessions/test-session",
 		Mode: LaunchModeNew,
 	}
 

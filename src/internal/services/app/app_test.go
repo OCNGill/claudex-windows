@@ -396,3 +396,306 @@ func TestRenameLogFileForSession_ForkMode(t *testing.T) {
 	// Assert: Environment variable updated
 	assert.Equal(t, expectedNewPath, h.Env.Get("CLAUDEX_LOG_FILE"), "CLAUDEX_LOG_FILE should point to forked session log")
 }
+
+// TestInit_CreatesClaudexDirectory verifies Init creates .claudex/ structure on fresh filesystem
+// Given: Fresh filesystem (no .claudex/)
+// When: Init() called
+// Then: .claudex/ folder created with config.toml defaults
+func TestInit_CreatesClaudexDirectory(t *testing.T) {
+	// Setup - fresh filesystem
+	h := testutil.NewTestHarness()
+
+	// Create app with mocked dependencies
+	showVersion := false
+	noOverwrite := false
+	updateDocs := false
+	setupMCP := false
+	docPaths := []string{}
+
+	app := &App{
+		deps:            &Dependencies{FS: h.FS, Cmd: h.Commander, Clock: h, UUID: h, Env: h.Env},
+		version:         "1.0.0",
+		showVersion:     &showVersion,
+		noOverwriteFlag: &noOverwrite,
+		updateDocsFlag:  &updateDocs,
+		setupMCPFlag:    &setupMCP,
+		docPathsFlag:    docPaths,
+	}
+
+	// Mock environment variables
+	h.Env.Set("HOME", "/home/user")
+
+	// Execute Init (migration uses relative paths like .claudex, which work with MemMapFs)
+	err := app.Init()
+	require.NoError(t, err, "Init should succeed on fresh filesystem")
+
+	// Assert: .claudex/ directory created (using paths.ClaudexDir constant)
+	exists, err := afero.DirExists(h.FS, ".claudex")
+	require.NoError(t, err)
+	assert.True(t, exists, ".claudex/ directory should be created")
+
+	// Assert: config.toml created with defaults
+	exists, err = afero.Exists(h.FS, ".claudex/config.toml")
+	require.NoError(t, err)
+	assert.True(t, exists, ".claudex/config.toml should be created")
+
+	// Assert: config content contains defaults
+	content, err := afero.ReadFile(h.FS, ".claudex/config.toml")
+	require.NoError(t, err)
+	assert.Contains(t, string(content), "autodoc_session_progress", "config should contain default settings")
+
+	// Assert: sessions directory created (using app.sessionsDir which includes projectDir)
+	assert.NotEmpty(t, app.sessionsDir, "sessions directory path should be set")
+	exists, err = afero.DirExists(h.FS, app.sessionsDir)
+	require.NoError(t, err)
+	assert.True(t, exists, "sessions directory should be created")
+
+	// Assert: logs directory created (path includes projectDir from os.Getwd())
+	projectDir := app.projectDir
+	logsDir := filepath.Join(projectDir, ".claudex/logs")
+	exists, err = afero.DirExists(h.FS, logsDir)
+	require.NoError(t, err)
+	assert.True(t, exists, "logs directory should be created")
+
+	// Assert: log file created
+	assert.NotEmpty(t, app.logFilePath, "log file path should be set")
+	exists, err = afero.Exists(h.FS, app.logFilePath)
+	require.NoError(t, err)
+	assert.True(t, exists, "log file should be created")
+}
+
+// TestInit_MigratesLegacySessions verifies legacy sessions/ folder migration
+// Given: Legacy sessions/ folder with content
+// When: Init() called
+// Then: Sessions moved to .claudex/sessions/, old sessions/ removed
+func TestInit_MigratesLegacySessions(t *testing.T) {
+	// Setup - create legacy sessions/
+	h := testutil.NewTestHarness()
+
+	// Create legacy sessions directory with content
+	h.WriteFile("sessions/session-1/conversation.md", "# Session 1 content")
+	h.WriteFile("sessions/session-2/conversation.md", "# Session 2 content")
+
+	// Create app
+	showVersion := false
+	noOverwrite := false
+	updateDocs := false
+	setupMCP := false
+	docPaths := []string{}
+
+	app := &App{
+		deps:            &Dependencies{FS: h.FS, Cmd: h.Commander, Clock: h, UUID: h, Env: h.Env},
+		version:         "1.0.0",
+		showVersion:     &showVersion,
+		noOverwriteFlag: &noOverwrite,
+		updateDocsFlag:  &updateDocs,
+		setupMCPFlag:    &setupMCP,
+		docPathsFlag:    docPaths,
+	}
+
+	h.Env.Set("HOME", "/home/user")
+
+	// Execute Init
+	err := app.Init()
+	require.NoError(t, err, "Init should succeed with legacy sessions")
+
+	// Assert: Sessions migrated to new location
+	exists, err := afero.Exists(h.FS, ".claudex/sessions/session-1/conversation.md")
+	require.NoError(t, err)
+	assert.True(t, exists, "session-1 should be migrated to .claudex/sessions/")
+
+	exists, err = afero.Exists(h.FS, ".claudex/sessions/session-2/conversation.md")
+	require.NoError(t, err)
+	assert.True(t, exists, "session-2 should be migrated to .claudex/sessions/")
+
+	// Assert: Content preserved
+	content, err := afero.ReadFile(h.FS, ".claudex/sessions/session-1/conversation.md")
+	require.NoError(t, err)
+	assert.Equal(t, "# Session 1 content", string(content), "session content should be preserved")
+
+	// Assert: Old sessions/ directory removed
+	exists, err = afero.DirExists(h.FS, "sessions")
+	require.NoError(t, err)
+	assert.False(t, exists, "legacy sessions/ directory should be removed after migration")
+}
+
+// TestInit_MigratesLegacyConfig verifies legacy .claudex.toml migration
+// Given: Legacy .claudex.toml with custom values
+// When: Init() called
+// Then: Config moved to .claudex/config.toml, values preserved, old file removed
+func TestInit_MigratesLegacyConfig(t *testing.T) {
+	// Setup - create legacy config
+	h := testutil.NewTestHarness()
+
+	// Create legacy config with custom values
+	legacyConfig := `# Legacy config
+[features]
+autodoc_session_progress = false
+autodoc_session_end = false
+autodoc_frequency = 10
+
+doc = ["/custom/path"]`
+
+	h.WriteFile(".claudex.toml", legacyConfig)
+
+	// Create app
+	showVersion := false
+	noOverwrite := false
+	updateDocs := false
+	setupMCP := false
+	docPaths := []string{}
+
+	app := &App{
+		deps:            &Dependencies{FS: h.FS, Cmd: h.Commander, Clock: h, UUID: h, Env: h.Env},
+		version:         "1.0.0",
+		showVersion:     &showVersion,
+		noOverwriteFlag: &noOverwrite,
+		updateDocsFlag:  &updateDocs,
+		setupMCPFlag:    &setupMCP,
+		docPathsFlag:    docPaths,
+	}
+
+	h.Env.Set("HOME", "/home/user")
+
+	// Execute Init
+	err := app.Init()
+	require.NoError(t, err, "Init should succeed with legacy config")
+
+	// Assert: Config migrated to new location
+	exists, err := afero.Exists(h.FS, ".claudex/config.toml")
+	require.NoError(t, err)
+	assert.True(t, exists, "config should be migrated to .claudex/config.toml")
+
+	// Assert: Custom values preserved
+	content, err := afero.ReadFile(h.FS, ".claudex/config.toml")
+	require.NoError(t, err)
+	assert.Contains(t, string(content), "autodoc_frequency = 10", "custom config values should be preserved")
+	assert.Contains(t, string(content), "/custom/path", "custom doc paths should be preserved")
+
+	// Assert: Old .claudex.toml removed
+	exists, err = afero.Exists(h.FS, ".claudex.toml")
+	require.NoError(t, err)
+	assert.False(t, exists, "legacy .claudex.toml should be removed after migration")
+
+	// Assert: Config loaded into app
+	assert.NotNil(t, app.cfg, "config should be loaded into app")
+}
+
+// TestInit_LoadsConfigFromNewPath verifies config loading from .claudex/config.toml
+// Given: .claudex/config.toml exists with specific values
+// When: Init() called
+// Then: Config values are loaded correctly into app.cfg
+func TestInit_LoadsConfigFromNewPath(t *testing.T) {
+	// Setup - create .claudex/ with config
+	h := testutil.NewTestHarness()
+
+	// Create config with specific values
+	configContent := `# Test config
+doc = ["/path/one", "/path/two"]
+no_overwrite = true
+
+[features]
+autodoc_session_progress = false
+autodoc_session_end = true
+autodoc_frequency = 20`
+
+	h.WriteFile(".claudex/config.toml", configContent)
+
+	// Create app
+	showVersion := false
+	noOverwrite := false
+	updateDocs := false
+	setupMCP := false
+	docPaths := []string{}
+
+	app := &App{
+		deps:            &Dependencies{FS: h.FS, Cmd: h.Commander, Clock: h, UUID: h, Env: h.Env},
+		version:         "1.0.0",
+		showVersion:     &showVersion,
+		noOverwriteFlag: &noOverwrite,
+		updateDocsFlag:  &updateDocs,
+		setupMCPFlag:    &setupMCP,
+		docPathsFlag:    docPaths,
+	}
+
+	h.Env.Set("HOME", "/home/user")
+
+	// Execute Init
+	err := app.Init()
+	require.NoError(t, err, "Init should succeed with existing config")
+
+	// Assert: Config loaded into app.cfg
+	assert.NotNil(t, app.cfg, "config should be loaded")
+
+	// Assert: Config struct contains the expected values
+	assert.Equal(t, []string{"/path/one", "/path/two"}, app.cfg.Doc, "config.Doc should contain doc paths")
+	assert.True(t, app.cfg.NoOverwrite, "config.NoOverwrite should be true")
+	assert.False(t, app.cfg.Features.AutodocSessionProgress, "config.Features.AutodocSessionProgress should be false")
+	assert.True(t, app.cfg.Features.AutodocSessionEnd, "config.Features.AutodocSessionEnd should be true")
+	assert.Equal(t, 20, app.cfg.Features.AutodocFrequency, "config.Features.AutodocFrequency should be 20")
+}
+
+// TestInit_MigrationIdempotent verifies migration can run multiple times safely
+// Given: .claudex/ with existing content
+// When: Init() called twice
+// Then: No errors, no data corruption, idempotent operation
+func TestInit_MigrationIdempotent(t *testing.T) {
+	// Setup - create .claudex/ with content
+	h := testutil.NewTestHarness()
+
+	// Create existing session
+	h.WriteFile(".claudex/sessions/existing-session/conversation.md", "# Existing content")
+	h.WriteFile(".claudex/config.toml", "# Existing config\n[features]\nautodoc_frequency = 15")
+
+	// Create app
+	showVersion := false
+	noOverwrite := false
+	updateDocs := false
+	setupMCP := false
+	docPaths := []string{}
+
+	app := &App{
+		deps:            &Dependencies{FS: h.FS, Cmd: h.Commander, Clock: h, UUID: h, Env: h.Env},
+		version:         "1.0.0",
+		showVersion:     &showVersion,
+		noOverwriteFlag: &noOverwrite,
+		updateDocsFlag:  &updateDocs,
+		setupMCPFlag:    &setupMCP,
+		docPathsFlag:    docPaths,
+	}
+
+	h.Env.Set("HOME", "/home/user")
+
+	// Execute Init first time
+	err := app.Init()
+	require.NoError(t, err, "first Init() should succeed")
+
+	// Read content after first init
+	content1, err := afero.ReadFile(h.FS, ".claudex/sessions/existing-session/conversation.md")
+	require.NoError(t, err)
+
+	config1, err := afero.ReadFile(h.FS, ".claudex/config.toml")
+	require.NoError(t, err)
+
+	// Execute Init second time (idempotent)
+	err = app.Init()
+	require.NoError(t, err, "second Init() should succeed (idempotent)")
+
+	// Assert: Content unchanged
+	content2, err := afero.ReadFile(h.FS, ".claudex/sessions/existing-session/conversation.md")
+	require.NoError(t, err)
+	assert.Equal(t, string(content1), string(content2), "session content should be unchanged")
+
+	config2, err := afero.ReadFile(h.FS, ".claudex/config.toml")
+	require.NoError(t, err)
+	assert.Equal(t, string(config1), string(config2), "config content should be unchanged")
+
+	// Assert: No duplicate directories or corruption
+	exists, err := afero.DirExists(h.FS, ".claudex")
+	require.NoError(t, err)
+	assert.True(t, exists, ".claudex should still exist")
+
+	exists, err = afero.DirExists(h.FS, ".claudex/sessions")
+	require.NoError(t, err)
+	assert.True(t, exists, ".claudex/sessions should still exist")
+}

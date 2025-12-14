@@ -10,7 +10,7 @@ import (
 // TestLoad_EmptyConfig_ReturnsDefaults verifies that an empty config file returns default feature values
 func TestLoad_EmptyConfig_ReturnsDefaults(t *testing.T) {
 	fs := afero.NewMemMapFs()
-	configPath := "/test/.claudex.toml"
+	configPath := "/test/.claudex/config.toml"
 
 	// Create empty config file
 	err := afero.WriteFile(fs, configPath, []byte(""), 0644)
@@ -29,7 +29,7 @@ func TestLoad_EmptyConfig_ReturnsDefaults(t *testing.T) {
 // TestLoad_NoConfigFile_ReturnsDefaults verifies that missing config file returns defaults
 func TestLoad_NoConfigFile_ReturnsDefaults(t *testing.T) {
 	fs := afero.NewMemMapFs()
-	configPath := "/test/.claudex.toml"
+	configPath := "/test/.claudex/config.toml"
 
 	// Don't create config file
 
@@ -98,7 +98,7 @@ autodoc_frequency = 15`,
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fs := afero.NewMemMapFs()
-			configPath := "/test/.claudex.toml"
+			configPath := "/test/.claudex/config.toml"
 
 			err := afero.WriteFile(fs, configPath, []byte(tt.content), 0644)
 			require.NoError(t, err)
@@ -161,7 +161,7 @@ autodoc_frequency = 10`,
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fs := afero.NewMemMapFs()
-			configPath := "/test/.claudex.toml"
+			configPath := "/test/.claudex/config.toml"
 
 			err := afero.WriteFile(fs, configPath, []byte(tt.content), 0644)
 			require.NoError(t, err)
@@ -204,7 +204,7 @@ autodoc_frequency = 1000`,
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fs := afero.NewMemMapFs()
-			configPath := "/test/.claudex.toml"
+			configPath := "/test/.claudex/config.toml"
 
 			err := afero.WriteFile(fs, configPath, []byte(tt.content), 0644)
 			require.NoError(t, err)
@@ -230,7 +230,7 @@ autodoc_frequency = 15
 `
 
 	fs := afero.NewMemMapFs()
-	configPath := "/test/.claudex.toml"
+	configPath := "/test/.claudex/config.toml"
 
 	err := afero.WriteFile(fs, configPath, []byte(content), 0644)
 	require.NoError(t, err)
@@ -254,7 +254,7 @@ func TestLoad_MalformedTOML_ReturnsError(t *testing.T) {
 autodoc_session_progress = false` // Missing closing bracket
 
 	fs := afero.NewMemMapFs()
-	configPath := "/test/.claudex.toml"
+	configPath := "/test/.claudex/config.toml"
 
 	err := afero.WriteFile(fs, configPath, []byte(content), 0644)
 	require.NoError(t, err)

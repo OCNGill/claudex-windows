@@ -89,8 +89,8 @@ EOF
     exit 0
 fi
 
-# Find session folder using glob pattern: ./sessions/*-{session_id}
-SESSION_PATTERN="./sessions/*-${SESSION_ID}"
+# Find session folder using glob pattern: ./.claudex/sessions/*-{session_id}
+SESSION_PATTERN="./.claudex/sessions/*-${SESSION_ID}"
 SESSION_FOLDERS=($(ls -d $SESSION_PATTERN 2>/dev/null || true))
 
 if [ ${#SESSION_FOLDERS[@]} -eq 0 ]; then

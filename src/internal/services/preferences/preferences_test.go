@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"claudex/internal/services/paths"
+
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -29,7 +31,7 @@ func TestFileService_Load_ValidJSON(t *testing.T) {
 	// Setup
 	fs := afero.NewMemMapFs()
 	projectDir := "/test/project"
-	claudexPath := filepath.Join(projectDir, claudexDir)
+	claudexPath := filepath.Join(projectDir, paths.ClaudexDir)
 	require.NoError(t, fs.MkdirAll(claudexPath, 0755))
 
 	expectedPrefs := Preferences{
@@ -40,7 +42,7 @@ func TestFileService_Load_ValidJSON(t *testing.T) {
 	data, err := json.Marshal(expectedPrefs)
 	require.NoError(t, err)
 
-	prefsPath := filepath.Join(claudexPath, preferencesFileName)
+	prefsPath := filepath.Join(projectDir, paths.PreferencesFile)
 	require.NoError(t, afero.WriteFile(fs, prefsPath, data, 0644))
 
 	service := New(fs, projectDir)
@@ -58,10 +60,10 @@ func TestFileService_Load_InvalidJSON(t *testing.T) {
 	// Setup
 	fs := afero.NewMemMapFs()
 	projectDir := "/test/project"
-	claudexPath := filepath.Join(projectDir, claudexDir)
+	claudexPath := filepath.Join(projectDir, paths.ClaudexDir)
 	require.NoError(t, fs.MkdirAll(claudexPath, 0755))
 
-	prefsPath := filepath.Join(claudexPath, preferencesFileName)
+	prefsPath := filepath.Join(projectDir, paths.PreferencesFile)
 	require.NoError(t, afero.WriteFile(fs, prefsPath, []byte("invalid json"), 0644))
 
 	service := New(fs, projectDir)
@@ -91,13 +93,13 @@ func TestFileService_Save_CreatesDirectory(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify .claudex directory was created
-	claudexPath := filepath.Join(projectDir, claudexDir)
+	claudexPath := filepath.Join(projectDir, paths.ClaudexDir)
 	exists, err := afero.DirExists(fs, claudexPath)
 	require.NoError(t, err)
 	assert.True(t, exists)
 
 	// Verify file was created
-	prefsPath := filepath.Join(claudexPath, preferencesFileName)
+	prefsPath := filepath.Join(projectDir, paths.PreferencesFile)
 	exists, err = afero.Exists(fs, prefsPath)
 	require.NoError(t, err)
 	assert.True(t, exists)
@@ -160,7 +162,7 @@ func TestFileService_Save_NoTempFileRemains(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify temp file doesn't exist
-	tempPath := filepath.Join(projectDir, claudexDir, preferencesFileName+".tmp")
+	tempPath := filepath.Join(projectDir, paths.PreferencesFile+".tmp")
 	exists, err := afero.Exists(fs, tempPath)
 	require.NoError(t, err)
 	assert.False(t, exists, "temporary file should not remain after successful write")
@@ -224,7 +226,7 @@ func TestFileService_Save_DirectoryAlreadyExists(t *testing.T) {
 	// Setup
 	fs := afero.NewMemMapFs()
 	projectDir := "/test/project"
-	claudexPath := filepath.Join(projectDir, claudexDir)
+	claudexPath := filepath.Join(projectDir, paths.ClaudexDir)
 	require.NoError(t, fs.MkdirAll(claudexPath, 0755))
 
 	service := New(fs, projectDir)

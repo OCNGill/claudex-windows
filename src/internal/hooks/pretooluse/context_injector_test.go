@@ -73,7 +73,7 @@ func TestHandler_EmptyPrompt(t *testing.T) {
 	env := shared.NewMockEnv()
 
 	// Create session folder
-	sessionPath := "/workspace/sessions/test-session-abc123"
+	sessionPath := "/workspace/.claudex/sessions/test-session-abc123"
 	err := fs.MkdirAll(sessionPath, 0755)
 	require.NoError(t, err)
 
@@ -110,7 +110,7 @@ func TestHandler_MissingPrompt(t *testing.T) {
 	env := shared.NewMockEnv()
 
 	// Create session folder
-	sessionPath := "/workspace/sessions/test-session-abc123"
+	sessionPath := "/workspace/.claudex/sessions/test-session-abc123"
 	err := fs.MkdirAll(sessionPath, 0755)
 	require.NoError(t, err)
 
@@ -146,7 +146,7 @@ func TestHandler_SuccessfulInjection(t *testing.T) {
 	env := shared.NewMockEnv()
 
 	// Create session folder with files
-	sessionPath := "/workspace/sessions/test-session-abc123"
+	sessionPath := "/workspace/.claudex/sessions/test-session-abc123"
 	err := fs.MkdirAll(sessionPath, 0755)
 	require.NoError(t, err)
 
@@ -207,7 +207,7 @@ func TestHandler_EmptySessionFolder(t *testing.T) {
 	env := shared.NewMockEnv()
 
 	// Create empty session folder
-	sessionPath := "/workspace/sessions/test-session-abc123"
+	sessionPath := "/workspace/.claudex/sessions/test-session-abc123"
 	err := fs.MkdirAll(sessionPath, 0755)
 	require.NoError(t, err)
 
@@ -245,7 +245,7 @@ func TestHandler_WithDocPaths(t *testing.T) {
 	env := shared.NewMockEnv()
 
 	// Create session folder
-	sessionPath := "/workspace/sessions/test-session-abc123"
+	sessionPath := "/workspace/.claudex/sessions/test-session-abc123"
 	err := fs.MkdirAll(sessionPath, 0755)
 	require.NoError(t, err)
 
@@ -286,7 +286,7 @@ func TestHandler_PatternMatchSessionFolder(t *testing.T) {
 	env := shared.NewMockEnv()
 
 	// Create session folder with pattern-based name
-	sessionPath := "./sessions/golang-hooks-rewrite-abc123"
+	sessionPath := "./.claudex/sessions/golang-hooks-rewrite-abc123"
 	err := fs.MkdirAll(sessionPath, 0755)
 	require.NoError(t, err)
 
@@ -327,7 +327,7 @@ func TestHandler_PreservesAllToolInputFields(t *testing.T) {
 	env := shared.NewMockEnv()
 
 	// Create session folder
-	sessionPath := "/workspace/sessions/test-session-abc123"
+	sessionPath := "/workspace/.claudex/sessions/test-session-abc123"
 	err := fs.MkdirAll(sessionPath, 0755)
 	require.NoError(t, err)
 
@@ -375,7 +375,7 @@ func TestHandler_SessionFolderWithDirectories(t *testing.T) {
 	env := shared.NewMockEnv()
 
 	// Create session folder with both files and directories
-	sessionPath := "/workspace/sessions/test-session-abc123"
+	sessionPath := "/workspace/.claudex/sessions/test-session-abc123"
 	err := fs.MkdirAll(sessionPath+"/subdir", 0755)
 	require.NoError(t, err)
 
@@ -419,7 +419,7 @@ func TestBuildSessionContext(t *testing.T) {
 	fs := afero.NewMemMapFs()
 	env := shared.NewMockEnv()
 
-	sessionPath := "/workspace/sessions/test-session-abc123"
+	sessionPath := "/workspace/.claudex/sessions/test-session-abc123"
 	err := fs.MkdirAll(sessionPath, 0755)
 	require.NoError(t, err)
 
@@ -461,7 +461,7 @@ func TestListSessionFiles(t *testing.T) {
 	fs := afero.NewMemMapFs()
 	env := shared.NewMockEnv()
 
-	sessionPath := "/workspace/sessions/test-session"
+	sessionPath := "/workspace/.claudex/sessions/test-session"
 	err := fs.MkdirAll(sessionPath, 0755)
 	require.NoError(t, err)
 
@@ -505,7 +505,7 @@ func TestBuildSessionContext_WithOverview(t *testing.T) {
 	fs := afero.NewMemMapFs()
 	env := shared.NewMockEnv()
 
-	sessionPath := "/workspace/sessions/test-session"
+	sessionPath := "/workspace/.claudex/sessions/test-session"
 	err := fs.MkdirAll(sessionPath, 0755)
 	require.NoError(t, err)
 
@@ -535,7 +535,7 @@ func TestBuildSessionContext_WithoutOverview(t *testing.T) {
 	fs := afero.NewMemMapFs()
 	env := shared.NewMockEnv()
 
-	sessionPath := "/workspace/sessions/test-session"
+	sessionPath := "/workspace/.claudex/sessions/test-session"
 	err := fs.MkdirAll(sessionPath, 0755)
 	require.NoError(t, err)
 
@@ -564,7 +564,7 @@ func TestBuildSessionContext_WithIndexMdHint(t *testing.T) {
 	fs := afero.NewMemMapFs()
 	env := shared.NewMockEnv()
 
-	sessionPath := "/workspace/sessions/test-session"
+	sessionPath := "/workspace/.claudex/sessions/test-session"
 	projectRoot := "/workspace/project"
 
 	err := fs.MkdirAll(sessionPath, 0755)
@@ -593,7 +593,7 @@ func TestBuildSessionContext_NoIndexMdHint(t *testing.T) {
 	fs := afero.NewMemMapFs()
 	env := shared.NewMockEnv()
 
-	sessionPath := "/workspace/sessions/test-session"
+	sessionPath := "/workspace/.claudex/sessions/test-session"
 	projectRoot := "/workspace/project"
 
 	err := fs.MkdirAll(sessionPath, 0755)

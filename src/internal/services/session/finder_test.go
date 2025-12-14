@@ -18,7 +18,7 @@ func Test_FindSessionFolder_EnvVarPriority(t *testing.T) {
 
 	// Also create a pattern-matching session (should be ignored)
 	sessionID := "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
-	h.CreateDir("./sessions/feature-login-" + sessionID)
+	h.CreateDir("./.claudex/sessions/feature-login-" + sessionID)
 
 	// Set env var
 	h.Env.Set("CLAUDEX_SESSION_PATH", envPath)
@@ -53,7 +53,7 @@ func Test_FindSessionFolder_PatternMatch(t *testing.T) {
 	h := testutil.NewTestHarness()
 
 	sessionID := "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
-	sessionPath := "./sessions/feature-login-" + sessionID
+	sessionPath := "./.claudex/sessions/feature-login-" + sessionID
 	h.CreateDir(sessionPath)
 
 	// Exercise
@@ -62,7 +62,7 @@ func Test_FindSessionFolder_PatternMatch(t *testing.T) {
 	// Verify - path should contain the session ID (afero may normalize path)
 	require.NoError(t, err)
 	require.Contains(t, result, sessionID)
-	require.Contains(t, result, "sessions/feature-login")
+	require.Contains(t, result, ".claudex/sessions/feature-login")
 }
 
 // Test_FindSessionFolder_MultipleMatches tests behavior with multiple matching sessions
@@ -72,8 +72,8 @@ func Test_FindSessionFolder_MultipleMatches(t *testing.T) {
 	sessionID := "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 
 	// Create multiple sessions with same ID (unlikely but possible)
-	h.CreateDir("./sessions/feature-a-" + sessionID)
-	h.CreateDir("./sessions/feature-b-" + sessionID)
+	h.CreateDir("./.claudex/sessions/feature-a-" + sessionID)
+	h.CreateDir("./.claudex/sessions/feature-b-" + sessionID)
 
 	// Exercise
 	result, err := FindSessionFolder(h.FS, h.Env, sessionID)
@@ -88,7 +88,7 @@ func Test_FindSessionFolder_NotFound(t *testing.T) {
 	h := testutil.NewTestHarness()
 
 	// Create sessions directory but no matching session
-	h.CreateDir("./sessions")
+	h.CreateDir("./.claudex/sessions")
 
 	// Exercise
 	sessionID := "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
@@ -105,7 +105,7 @@ func Test_FindSessionFolderWithCwd_CustomCwd(t *testing.T) {
 
 	sessionID := "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 	cwd := "/project/workspace"
-	sessionPath := cwd + "/sessions/feature-login-" + sessionID
+	sessionPath := cwd + "/.claudex/sessions/feature-login-" + sessionID
 	h.CreateDir(sessionPath)
 
 	// Exercise
@@ -128,7 +128,7 @@ func Test_FindSessionFolderWithCwd_EnvVarOverridesCwd(t *testing.T) {
 	// Also create pattern-matching session in cwd
 	sessionID := "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 	cwd := "/project/workspace"
-	h.CreateDir(cwd + "/sessions/feature-login-" + sessionID)
+	h.CreateDir(cwd + "/.claudex/sessions/feature-login-" + sessionID)
 
 	// Exercise
 	result, err := FindSessionFolderWithCwd(h.FS, h.Env, sessionID, cwd)
@@ -147,22 +147,22 @@ func Test_GetSessionID_ValidUUID(t *testing.T) {
 	}{
 		{
 			name:     "Standard session path",
-			path:     "/sessions/feature-login-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+			path:     "/.claudex/sessions/feature-login-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
 			expected: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
 		},
 		{
 			name:     "Complex session name with dashes",
-			path:     "./sessions/my-feature-work-11112222-3333-4444-5555-666666666666",
+			path:     "./.claudex/sessions/my-feature-work-11112222-3333-4444-5555-666666666666",
 			expected: "11112222-3333-4444-5555-666666666666",
 		},
 		{
 			name:     "Session name without UUID",
-			path:     "/sessions/feature-login",
+			path:     "/.claudex/sessions/feature-login",
 			expected: "",
 		},
 		{
 			name:     "Malformed UUID",
-			path:     "/sessions/feature-login-invalid-uuid-format",
+			path:     "/.claudex/sessions/feature-login-invalid-uuid-format",
 			expected: "",
 		},
 	}

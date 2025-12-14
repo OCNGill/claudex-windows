@@ -13,7 +13,7 @@ import (
 func Test_ReadCounter_FileExists(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateSessionWithFiles(sessionPath, map[string]string{
 		".doc-update-counter": "5",
 	})
@@ -30,7 +30,7 @@ func Test_ReadCounter_FileExists(t *testing.T) {
 func Test_ReadCounter_FileNotExists(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateDir(sessionPath)
 
 	// Exercise
@@ -45,7 +45,7 @@ func Test_ReadCounter_FileNotExists(t *testing.T) {
 func Test_ReadCounter_EmptyFile(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateSessionWithFiles(sessionPath, map[string]string{
 		".doc-update-counter": "",
 	})
@@ -62,7 +62,7 @@ func Test_ReadCounter_EmptyFile(t *testing.T) {
 func Test_ReadCounter_WhitespaceFile(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateSessionWithFiles(sessionPath, map[string]string{
 		".doc-update-counter": "  \n  ",
 	})
@@ -79,7 +79,7 @@ func Test_ReadCounter_WhitespaceFile(t *testing.T) {
 func Test_ReadCounter_InvalidContent(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateSessionWithFiles(sessionPath, map[string]string{
 		".doc-update-counter": "not-a-number",
 	})
@@ -96,7 +96,7 @@ func Test_ReadCounter_InvalidContent(t *testing.T) {
 func Test_WriteCounter(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateDir(sessionPath)
 
 	// Exercise
@@ -112,7 +112,7 @@ func Test_WriteCounter(t *testing.T) {
 func Test_WriteCounter_Overwrite(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateSessionWithFiles(sessionPath, map[string]string{
 		".doc-update-counter": "10",
 	})
@@ -133,7 +133,7 @@ func Test_WriteCounter_Overwrite(t *testing.T) {
 func Test_IncrementCounter(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateSessionWithFiles(sessionPath, map[string]string{
 		".doc-update-counter": "5",
 	})
@@ -154,7 +154,7 @@ func Test_IncrementCounter(t *testing.T) {
 func Test_IncrementCounter_FromZero(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateDir(sessionPath)
 
 	// Exercise - no counter file exists
@@ -172,7 +172,7 @@ func Test_IncrementCounter_FromZero(t *testing.T) {
 func Test_ResetCounter(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateSessionWithFiles(sessionPath, map[string]string{
 		".doc-update-counter": "42",
 	})
@@ -192,7 +192,7 @@ func Test_ResetCounter(t *testing.T) {
 func Test_ReadLastProcessedLine(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateSessionWithFiles(sessionPath, map[string]string{
 		".last-processed-line-overview": "150",
 	})
@@ -209,7 +209,7 @@ func Test_ReadLastProcessedLine(t *testing.T) {
 func Test_ReadLastProcessedLine_NotExists(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateDir(sessionPath)
 
 	// Exercise
@@ -224,7 +224,7 @@ func Test_ReadLastProcessedLine_NotExists(t *testing.T) {
 func Test_WriteLastProcessedLine(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateDir(sessionPath)
 
 	// Exercise
@@ -240,7 +240,7 @@ func Test_WriteLastProcessedLine(t *testing.T) {
 func Test_WriteLastProcessedLine_Update(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateSessionWithFiles(sessionPath, map[string]string{
 		".last-processed-line-overview": "100",
 	})
@@ -260,7 +260,7 @@ func Test_WriteLastProcessedLine_Update(t *testing.T) {
 func Test_CounterOperations_Sequence(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateDir(sessionPath)
 
 	// Start with no counter file

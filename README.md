@@ -13,7 +13,7 @@ The Claude Experience you wish you had.
 Every task starts with a session — a folder that accumulates everything Claude produces:
 
 ```
-sessions/
+.claudex/sessions/
 └── api-refactor-abc123/
     ├── session-overview.md    ← Auto-maintained status & index
     ├── feature-description.md ← Manually added from Jira, Linear, etc.
@@ -196,7 +196,24 @@ Profiles are automatically assembled based on your project's technology stack.
 
 ## Configuration
 
-Create a `.claudex.toml` file in your project root to customize behavior:
+Claudex stores its artifacts in a `.claudex/` folder in your project root:
+
+```
+.claudex/
+├── config.toml      # Configuration file (auto-created)
+├── sessions/        # Session data
+├── logs/            # Log files
+└── preferences.json # User preferences
+```
+
+**Migration Note:** Existing users are automatically migrated on first run:
+- `sessions/` → `.claudex/sessions/`
+- `logs/` → `.claudex/logs/`
+- `.claudex.toml` → `.claudex/config.toml`
+
+### Customizing Behavior
+
+Edit `.claudex/config.toml` to customize behavior:
 
 ```toml
 # Documentation files always loaded into context

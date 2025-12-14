@@ -76,7 +76,7 @@ if [ ! -z "$CLAUDEX_SESSION_PATH" ] && [ -d "$CLAUDEX_SESSION_PATH" ]; then
     log_message "Found session folder via env var: $SESSION_FOLDER"
 else
     # Priority 2: Current working directory
-    CWD_SESSION_PATTERN="$(pwd)/sessions/*-${SESSION_ID}"
+    CWD_SESSION_PATTERN="$(pwd)/.claudex/sessions/*-${SESSION_ID}"
     SESSION_FOLDERS=($(ls -d $CWD_SESSION_PATTERN 2>/dev/null || true))
 
     if [ ${#SESSION_FOLDERS[@]} -gt 0 ]; then
@@ -84,7 +84,7 @@ else
         log_message "Found session folder via CWD: $SESSION_FOLDER"
     else
         # Priority 3: Script location (fallback)
-        SCRIPT_SESSION_PATTERN="$PROJECT_ROOT/sessions/*-${SESSION_ID}"
+        SCRIPT_SESSION_PATTERN="$PROJECT_ROOT/.claudex/sessions/*-${SESSION_ID}"
         SESSION_FOLDERS=($(ls -d $SCRIPT_SESSION_PATTERN 2>/dev/null || true))
 
         if [ ${#SESSION_FOLDERS[@]} -gt 0 ]; then

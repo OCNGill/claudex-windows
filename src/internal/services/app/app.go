@@ -10,14 +10,16 @@ import (
 
 	"claudex"
 	"claudex/internal/services/config"
+	"claudex/internal/services/mcpconfig"
+	"claudex/internal/services/paths"
 	"claudex/internal/services/profile"
 	"claudex/internal/services/session"
+	migrateuc "claudex/internal/usecases/migrate"
 	setupuc "claudex/internal/usecases/setup"
 	setuphookuc "claudex/internal/usecases/setuphook"
 	setupmcpuc "claudex/internal/usecases/setupmcp"
 	updatecheckuc "claudex/internal/usecases/updatecheck"
 	updatedocsuc "claudex/internal/usecases/updatedocs"
-	"claudex/internal/services/mcpconfig"
 	"github.com/spf13/afero"
 )
 
@@ -76,8 +78,14 @@ func New(version string, showVersion *bool, noOverwrite *bool, updateDocs *bool,
 
 // Init initializes the application (parse flags, load config, setup logging)
 func (a *App) Init() error {
-	// Load config file (before flag.Parse)
-	cfg, err := config.Load(a.deps.FS, ".claudex.toml")
+	// Run migration to ensure .claudex/ folder exists and migrate legacy artifacts
+	migrator := migrateuc.New(a.deps.FS)
+	if err := migrator.Run(); err != nil {
+		return fmt.Errorf("migration failed: %w", err)
+	}
+
+	// Load config file from new location (after migration)
+	cfg, err := config.Load(a.deps.FS, paths.ConfigFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: Failed to load config: %v\n", err)
 		cfg = &config.Config{Doc: []string{}, NoOverwrite: false}
@@ -110,7 +118,7 @@ func (a *App) Init() error {
 		return fmt.Errorf("failed to get working directory: %w", err)
 	}
 	a.projectDir = projectDir
-	a.sessionsDir = filepath.Join(projectDir, "sessions")
+	a.sessionsDir = filepath.Join(projectDir, paths.SessionsDir)
 
 	// Ensure .claude directory is set up using setup usecase
 	setupUC := setupuc.New(a.deps.FS, a.deps.Env)
@@ -119,7 +127,7 @@ func (a *App) Init() error {
 	}
 
 	// Setup centralized logging
-	logsDir := filepath.Join(projectDir, "logs")
+	logsDir := filepath.Join(projectDir, paths.LogsDir)
 	if err := a.deps.FS.MkdirAll(logsDir, 0755); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: Could not create logs directory: %v\n", err)
 	}
@@ -240,7 +248,7 @@ func (a *App) Run() error {
 				fmt.Println("You can install manually with: npm install -g @anthropic-ai/claude-code")
 				return fmt.Errorf("failed to install claude CLI")
 			}
-			fmt.Println("\n✓ Claude Code CLI installed successfully!\n")
+			fmt.Println("\n✓ Claude Code CLI installed successfully!")
 		default:
 			fmt.Println("\nYou can install manually with: npm install -g @anthropic-ai/claude-code")
 			fmt.Println("More info: https://docs.anthropic.com/en/docs/claude-code")

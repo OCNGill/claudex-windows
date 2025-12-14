@@ -75,7 +75,7 @@ During the session:
 ## 5. Technical Concepts
 
 ### Session as a Folder
-A Session is defined by a directory in `sessions/`.
+A Session is defined by a directory in `.claudex/sessions/`.
 *   Contains metadata: `.description`, `.created`, `.last_used`.
 *   Contains context artifacts: Any files generated or modified during the specific session.
 *   Contains state: Links to the upstream Claude API Session ID (UUID).

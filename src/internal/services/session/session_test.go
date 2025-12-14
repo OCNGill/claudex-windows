@@ -134,7 +134,7 @@ func Test_UpdateLastUsedWithDeps(t *testing.T) {
 	h := testutil.NewTestHarness()
 	h.FixedTime = time.Date(2024, 1, 15, 14, 0, 0, 0, time.UTC)
 
-	sessionDir := "/project/sessions/feature-login-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+	sessionDir := "/project/.claudex/sessions/feature-login-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 	h.CreateSessionWithFiles(sessionDir, map[string]string{
 		".description": "Login feature",
 		".created":     "2024-01-15T10:30:00Z",

@@ -12,7 +12,7 @@ import (
 func Test_ReadMetadata_AllFilesExist(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateSessionWithFiles(sessionPath, map[string]string{
 		".description": "My awesome feature",
 		".created":     "2024-01-15T10:30:00Z",
@@ -34,7 +34,7 @@ func Test_ReadMetadata_AllFilesExist(t *testing.T) {
 func Test_ReadMetadata_SomeFilesMissing(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateSessionWithFiles(sessionPath, map[string]string{
 		".description": "Feature description",
 		// .created and .last_used are missing
@@ -55,7 +55,7 @@ func Test_ReadMetadata_SomeFilesMissing(t *testing.T) {
 func Test_ReadMetadata_AllFilesMissing(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateDir(sessionPath)
 
 	// Exercise
@@ -73,7 +73,7 @@ func Test_ReadMetadata_AllFilesMissing(t *testing.T) {
 func Test_ReadMetadata_WhitespaceHandling(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateSessionWithFiles(sessionPath, map[string]string{
 		".description": "  Feature with whitespace  \n",
 		".created":     "\n2024-01-15T10:30:00Z\n  ",
@@ -94,7 +94,7 @@ func Test_ReadMetadata_WhitespaceHandling(t *testing.T) {
 func Test_ReadMetadata_EmptyFiles(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateSessionWithFiles(sessionPath, map[string]string{
 		".description": "",
 		".created":     "",
@@ -115,7 +115,7 @@ func Test_ReadMetadata_EmptyFiles(t *testing.T) {
 func Test_ReadDescription(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateSessionWithFiles(sessionPath, map[string]string{
 		".description": "Login feature implementation",
 	})
@@ -132,7 +132,7 @@ func Test_ReadDescription(t *testing.T) {
 func Test_ReadDescription_Missing(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateDir(sessionPath)
 
 	// Exercise
@@ -147,7 +147,7 @@ func Test_ReadDescription_Missing(t *testing.T) {
 func Test_ReadCreatedTimestamp(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateSessionWithFiles(sessionPath, map[string]string{
 		".created": "2024-01-15T10:30:00Z",
 	})
@@ -164,7 +164,7 @@ func Test_ReadCreatedTimestamp(t *testing.T) {
 func Test_ReadCreatedTimestamp_Missing(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateDir(sessionPath)
 
 	// Exercise
@@ -179,7 +179,7 @@ func Test_ReadCreatedTimestamp_Missing(t *testing.T) {
 func Test_ReadLastUsedTimestamp(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateSessionWithFiles(sessionPath, map[string]string{
 		".last_used": "2024-01-15T14:00:00Z",
 	})
@@ -196,7 +196,7 @@ func Test_ReadLastUsedTimestamp(t *testing.T) {
 func Test_ReadLastUsedTimestamp_Missing(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateDir(sessionPath)
 
 	// Exercise
@@ -211,7 +211,7 @@ func Test_ReadLastUsedTimestamp_Missing(t *testing.T) {
 func Test_ReadMetadata_MultilineDescription(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateSessionWithFiles(sessionPath, map[string]string{
 		".description": "Line 1\nLine 2\nLine 3",
 	})
@@ -228,7 +228,7 @@ func Test_ReadMetadata_MultilineDescription(t *testing.T) {
 func Test_ReadMetadata_SpecialCharacters(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateSessionWithFiles(sessionPath, map[string]string{
 		".description": "Feature: Add 'quotes' and \"double quotes\" & special chars!",
 	})
@@ -245,7 +245,7 @@ func Test_ReadMetadata_SpecialCharacters(t *testing.T) {
 func Test_ReadMetadata_UnicodeCharacters(t *testing.T) {
 	h := testutil.NewTestHarness()
 
-	sessionPath := "/sessions/test-session"
+	sessionPath := "/.claudex/sessions/test-session"
 	h.CreateSessionWithFiles(sessionPath, map[string]string{
 		".description": "Implement feature 🚀 with emoji support",
 	})

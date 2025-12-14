@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"claudex/internal/services/env"
+	"claudex/internal/services/paths"
 
 	"github.com/spf13/afero"
 )
@@ -29,8 +30,8 @@ func FindSessionFolder(fs afero.Fs, environment env.Environment, sessionID strin
 		return "", fmt.Errorf("CLAUDEX_SESSION_PATH is set but directory does not exist: %s", envPath)
 	}
 
-	// Priority 2: Pattern match in ./sessions/*-{sessionID}
-	pattern := filepath.Join(".", "sessions", fmt.Sprintf("*-%s", sessionID))
+	// Priority 2: Pattern match in ./.claudex/sessions/*-{sessionID}
+	pattern := filepath.Join(".", paths.SessionsDir, fmt.Sprintf("*-%s", sessionID))
 	matches, err := afero.Glob(fs, pattern)
 	if err != nil {
 		return "", fmt.Errorf("failed to glob session pattern: %w", err)
@@ -59,8 +60,8 @@ func FindSessionFolderWithCwd(fs afero.Fs, environment env.Environment, sessionI
 		return "", fmt.Errorf("CLAUDEX_SESSION_PATH is set but directory does not exist: %s", envPath)
 	}
 
-	// Priority 2: Pattern match in {cwd}/sessions/*-{sessionID}
-	pattern := filepath.Join(cwd, "sessions", fmt.Sprintf("*-%s", sessionID))
+	// Priority 2: Pattern match in {cwd}/.claudex/sessions/*-{sessionID}
+	pattern := filepath.Join(cwd, paths.SessionsDir, fmt.Sprintf("*-%s", sessionID))
 	matches, err := afero.Glob(fs, pattern)
 	if err != nil {
 		return "", fmt.Errorf("failed to glob session pattern: %w", err)

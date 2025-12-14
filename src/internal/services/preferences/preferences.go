@@ -5,12 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/spf13/afero"
-)
+	"claudex/internal/services/paths"
 
-const (
-	preferencesFileName = "preferences.json"
-	claudexDir          = ".claudex"
+	"github.com/spf13/afero"
 )
 
 // FileService is the production implementation of Service
@@ -30,7 +27,7 @@ func New(fs afero.Fs, projectDir string) Service {
 // Load reads preferences from storage
 // Returns zero-value Preferences if file doesn't exist
 func (fs *FileService) Load() (Preferences, error) {
-	prefsPath := filepath.Join(fs.projectDir, claudexDir, preferencesFileName)
+	prefsPath := filepath.Join(fs.projectDir, paths.PreferencesFile)
 
 	data, err := afero.ReadFile(fs.fs, prefsPath)
 	if err != nil {
@@ -51,8 +48,8 @@ func (fs *FileService) Load() (Preferences, error) {
 
 // Save persists preferences to storage atomically
 func (fs *FileService) Save(prefs Preferences) error {
-	claudexPath := filepath.Join(fs.projectDir, claudexDir)
-	prefsPath := filepath.Join(claudexPath, preferencesFileName)
+	claudexPath := filepath.Join(fs.projectDir, paths.ClaudexDir)
+	prefsPath := filepath.Join(fs.projectDir, paths.PreferencesFile)
 	tempPath := prefsPath + ".tmp"
 
 	// Ensure .claudex directory exists
