@@ -15,3 +15,4 @@ dist/
 npm/@claudex/darwin-*/bin/
 npm/@claudex/linux-*/bin/
 *.tgz
+.claudex/
