@@ -14,6 +14,7 @@ Main application container for claudex CLI. Handles initialization, session life
 
 ## Setup Flows
 
+- `promptUpdateCheck()` - Checks for newer versions of claudex and prompts user to update (with never-ask-again option)
 - `promptHookSetup()` - Interactive git hook integration setup (auto-docs on commits)
 - `promptMCPSetup()` - Interactive MCP configuration for recommended MCPs (sequential-thinking, context7) with optional Context7 API token
 

@@ -8,4 +8,5 @@ Core business logic orchestrating features like session management, setup workfl
 - **setup/** - Initialize .claude directory structure with hooks, agents, and configuration
 - **setuphook/** - Git hook installation detection and user preference management
 - **setupmcp/** - Prompt users about MCP configuration with opt-in flow and preference management
+- **updatecheck/** - Check for newer versions of @claudex/cli and prompt users for updates
 - **updatedocs/** - Update index.md documentation based on git history changes

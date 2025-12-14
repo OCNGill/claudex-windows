@@ -13,8 +13,12 @@ Application service layer providing infrastructure and domain-specific operation
 
 ## MCP Configuration
 
-- `globalprefs/` - Global MCP setup preferences stored in ~/.config/claudex/mcp-preferences.json
+- `globalprefs/` - Global MCP and update check preferences stored in ~/.config/claudex/mcp-preferences.json
 - `mcpconfig/` - MCP server configuration management in Claude Code's ~/.claude.json file
+
+## Package Management
+
+- `npmregistry/` - npm registry client for querying latest package versions
 
 ## Infrastructure
 
