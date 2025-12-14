@@ -2,9 +2,11 @@
 
 This document describes how to release new versions of claudex to npm.
 
+> **Quick Release:** Run `/release` in Claude Code to automate the entire process.
+
 ## Prerequisites
 
-- npm account with publish access to `claudex` and `@claudex/*` packages
+- npm account with publish access to `@claudex/*` packages
 - `NPM_TOKEN` secret configured in GitHub repository (for automated releases)
 - Go 1.24+ installed locally (for manual releases)
 
