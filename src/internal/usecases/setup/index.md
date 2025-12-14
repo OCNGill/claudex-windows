@@ -30,7 +30,9 @@ Detected stacks are used to generate corresponding principal-engineer agents.
 
 The `Execute` method creates the complete .claude directory structure:
 1. Creates hooks/, agents/, and commands/agents/ directories
-2. Copies hooks from ~/.config/claudex/hooks/ (optional, with warning if missing)
+2. Installs hooks with dual-path support:
+   - Primary: Copies hooks from ~/.config/claudex/hooks/ (for `make install` users)
+   - Fallback: Installs hooks from embedded FS (for npm install users)
 3. Copies agent profiles from embedded FS to both agents/ and commands/agents/
 4. Detects project stacks using breadth-first file search (up to 3 levels deep)
 5. Generates principal-engineer-{stack} agents for each detected stack by combining embedded role + skill templates

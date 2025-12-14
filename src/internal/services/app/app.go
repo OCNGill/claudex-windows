@@ -221,6 +221,18 @@ func (a *App) renameLogFileForSession(si SessionInfo) {
 
 // Run executes the main application logic
 func (a *App) Run() error {
+	// Check if Claude CLI is installed
+	if !a.isClaudeInstalled() {
+		fmt.Println("\n❌ Claude Code CLI not found")
+		fmt.Println("\nClaudex requires Claude Code CLI to be installed.")
+		fmt.Println("Install it with:")
+		fmt.Println("  npm install -g @anthropic-ai/claude-code")
+		fmt.Println("\n⚠️  Note: Claude Code requires a Claude Pro ($20/mo), Max ($100/mo),")
+		fmt.Println("   or Team subscription. The free tier does not include Claude Code.")
+		fmt.Println("\nMore info: https://docs.anthropic.com/en/docs/claude-code")
+		return fmt.Errorf("claude CLI not installed")
+	}
+
 	// Early exit for --update-docs mode
 	if a.updateDocs {
 		uc := updatedocsuc.New(a.deps.FS, a.deps.Cmd, a.deps.Env)
@@ -413,6 +425,12 @@ func (a *App) promptUpdateCheck() {
 		fmt.Println("○ Skipped for now.")
 	}
 	fmt.Println()
+}
+
+// isClaudeInstalled checks if the Claude CLI is available in PATH
+func (a *App) isClaudeInstalled() bool {
+	_, err := a.deps.Cmd.Run("claude", "--version")
+	return err == nil
 }
 
 // isFlagSet checks if a flag was explicitly set by the user
