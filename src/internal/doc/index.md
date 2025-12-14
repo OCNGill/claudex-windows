@@ -12,6 +12,12 @@ Documentation generation and update services for Claudex sessions.
 ## Subdirectories
 
 - `rangeupdater/` - Range-based documentation updates using Git commit ranges
+  - `claude.go` - Background Claude invocation for index.md regeneration
+  - `updater.go` - Core range-based documentation update logic
+  - `resolver.go` - Commit range resolution and analysis
+  - `types.go` - Type definitions for range updates
+  - `skiprules.go` - Rules for skipping documentation updates
+  - `fallback.go` - Fallback strategies for update failures
 
 ## Tests
 
