@@ -81,14 +81,18 @@ func (uc *SetupUseCase) Execute(projectDir string, noOverwrite bool) error {
 		return fmt.Errorf("failed to create commands/agents directory: %w", err)
 	}
 
-	// Copy hooks from ~/.config/claudex/hooks/
+	// Copy hooks: first try ~/.config/claudex/hooks/, fallback to embedded hooks
 	sourceHooksDir := filepath.Join(claudexConfigDir, "hooks")
 	if _, err := uc.fs.Stat(sourceHooksDir); err == nil {
+		// Use hooks from config dir (make install users)
 		if err := filesystem.CopyDir(uc.fs, sourceHooksDir, hooksDir, noOverwrite); err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: Failed to copy hooks: %v\n", err)
 		}
 	} else {
-		fmt.Fprintf(os.Stderr, "Warning: Hooks directory not found at %s\n", sourceHooksDir)
+		// Fallback: install hooks from embedded FS (npm users)
+		if err := uc.installEmbeddedHooks(hooksDir, noOverwrite); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to install embedded hooks: %v\n", err)
+		}
 	}
 
 	// Copy agent profiles to both agents/ and commands/agents/ from embedded FS
@@ -200,6 +204,39 @@ func (uc *SetupUseCase) generateSettings(claudeDir string, _ bool) error {
 	}
 
 	return afero.WriteFile(uc.fs, settingsPath, finalContent, 0644)
+}
+
+// installEmbeddedHooks installs hook scripts from embedded FS to the target directory
+func (uc *SetupUseCase) installEmbeddedHooks(hooksDir string, noOverwrite bool) error {
+	entries, err := fs.ReadDir(claudex.Hooks, "scripts/proxies")
+	if err != nil {
+		return fmt.Errorf("could not read embedded hooks: %w", err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".sh") {
+			continue
+		}
+
+		content, err := fs.ReadFile(claudex.Hooks, filepath.Join("scripts/proxies", entry.Name()))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to read embedded hook %s: %v\n", entry.Name(), err)
+			continue
+		}
+
+		targetPath := filepath.Join(hooksDir, entry.Name())
+		if noOverwrite {
+			if _, err := uc.fs.Stat(targetPath); err == nil {
+				continue // File exists, skip
+			}
+		}
+
+		if err := afero.WriteFile(uc.fs, targetPath, content, 0755); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to install hook %s: %v\n", entry.Name(), err)
+		}
+	}
+
+	return nil
 }
 
 // createEngineerAlias creates a principal-engineer.md alias from the primary stack
