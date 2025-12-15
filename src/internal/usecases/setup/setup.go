@@ -203,6 +203,10 @@ func (uc *SetupUseCase) generateSettings(claudeDir string, _ bool) error {
 		finalContent = claudex.SettingsTemplate
 	}
 
+	// Replace relative hook paths with absolute paths
+	absHooksPath := filepath.Join(claudeDir, "hooks")
+	finalContent = []byte(strings.ReplaceAll(string(finalContent), ".claude/hooks/", absHooksPath+"/"))
+
 	return afero.WriteFile(uc.fs, settingsPath, finalContent, 0644)
 }
 

@@ -5,6 +5,7 @@ import (
 
 	"claudex/internal/testutil"
 
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -346,4 +347,100 @@ func Test_Execute_NoStackDetected(t *testing.T) {
 
 	// Verify - principal-engineer alias created (first default: typescript)
 	testutil.AssertFileExists(t, h.FS, "/project/.claude/agents/principal-engineer.md")
+}
+
+// Test_Execute_GeneratesAbsoluteHookPaths verifies that hook paths
+// in settings.local.json are replaced with absolute paths.
+func Test_Execute_GeneratesAbsoluteHookPaths(t *testing.T) {
+	// Setup
+	h := testutil.NewTestHarness()
+	h.Env.Set("HOME", "/home/user")
+
+	// Create optional hooks config
+	h.SetupConfigDir("/home/user/.config/claudex", map[string]string{
+		"hooks/notification-hook.sh": "#!/bin/bash\necho notify",
+	})
+
+	// Create project
+	h.CreateDir("/project")
+	h.WriteFile("/project/package.json", `{"name": "test"}`)
+
+	// Create usecase and exercise
+	uc := New(h.FS, h.Env)
+	err := uc.Execute("/project", false)
+
+	// Verify - no errors
+	require.NoError(t, err)
+
+	// Verify - settings file exists
+	testutil.AssertFileExists(t, h.FS, "/project/.claude/settings.local.json")
+
+	// Verify - all hook paths are absolute (not relative)
+	testutil.AssertFileContains(t, h.FS, "/project/.claude/settings.local.json", "/project/.claude/hooks/notification-hook.sh")
+	testutil.AssertFileContains(t, h.FS, "/project/.claude/settings.local.json", "/project/.claude/hooks/session-end.sh")
+	testutil.AssertFileContains(t, h.FS, "/project/.claude/settings.local.json", "/project/.claude/hooks/subagent-stop.sh")
+	testutil.AssertFileContains(t, h.FS, "/project/.claude/settings.local.json", "/project/.claude/hooks/pre-tool-use.sh")
+	testutil.AssertFileContains(t, h.FS, "/project/.claude/settings.local.json", "/project/.claude/hooks/post-tool-use.sh")
+	testutil.AssertFileContains(t, h.FS, "/project/.claude/settings.local.json", "/project/.claude/hooks/auto-doc-updater.sh")
+
+	// Verify - no relative paths remain
+	content, err := afero.ReadFile(h.FS, "/project/.claude/settings.local.json")
+	require.NoError(t, err)
+	assert.NotContains(t, string(content), `".claude/hooks/`)
+}
+
+// Test_Execute_MergesWithAbsolutePaths verifies that when merging settings,
+// the resulting hook paths are absolute.
+func Test_Execute_MergesWithAbsolutePaths(t *testing.T) {
+	// Setup
+	h := testutil.NewTestHarness()
+	h.Env.Set("HOME", "/home/user")
+
+	// Create optional hooks config
+	h.SetupConfigDir("/home/user/.config/claudex", map[string]string{
+		"hooks/notification-hook.sh": "#!/bin/bash\necho notify",
+	})
+
+	// Create project with existing settings (custom hook with relative path)
+	h.CreateDir("/project/.claude")
+	existingSettings := `{
+  "permissions": {
+    "allow": ["Bash(custom:*)"],
+    "deny": [],
+    "ask": []
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/my-custom-hook.sh"
+          }
+        ]
+      }
+    ]
+  }
+}`
+	h.WriteFile("/project/.claude/settings.local.json", existingSettings)
+	h.WriteFile("/project/package.json", `{"name": "test"}`)
+
+	// Create usecase and exercise
+	uc := New(h.FS, h.Env)
+	err := uc.Execute("/project", false)
+
+	// Verify - no errors
+	require.NoError(t, err)
+
+	// Verify - custom hook preserved and converted to absolute path
+	testutil.AssertFileContains(t, h.FS, "/project/.claude/settings.local.json", "/project/.claude/hooks/my-custom-hook.sh")
+
+	// Verify - template hooks added with absolute paths
+	testutil.AssertFileContains(t, h.FS, "/project/.claude/settings.local.json", "/project/.claude/hooks/notification-hook.sh")
+	testutil.AssertFileContains(t, h.FS, "/project/.claude/settings.local.json", "/project/.claude/hooks/session-end.sh")
+
+	// Verify - no relative paths remain
+	content, err := afero.ReadFile(h.FS, "/project/.claude/settings.local.json")
+	require.NoError(t, err)
+	assert.NotContains(t, string(content), `".claude/hooks/`)
 }
