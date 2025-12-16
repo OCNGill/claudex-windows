@@ -100,6 +100,15 @@ func (uc *SetupUseCase) Execute(projectDir string, noOverwrite bool) error {
 		fmt.Fprintf(os.Stderr, "Warning: Failed to copy agent profiles: %v\n", err)
 	}
 
+	// Copy command templates to commands/ from embedded FS
+	commandsDir := filepath.Join(claudeDir, "commands")
+	if err := uc.fs.MkdirAll(commandsDir, 0755); err != nil {
+		return fmt.Errorf("failed to create commands directory: %w", err)
+	}
+	if err := uc.copyCommandTemplates(commandsDir, noOverwrite); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to copy command templates: %v\n", err)
+	}
+
 	// Generate settings.local.json
 	if err := uc.generateSettings(claudeDir, noOverwrite); err != nil {
 		return err
@@ -132,6 +141,34 @@ func (uc *SetupUseCase) Execute(projectDir string, noOverwrite bool) error {
 func HandleExistingClaudeDirectory(projectDir, claudeDir string) (proceed bool, err error) {
 	// Silent merge: always proceed with setup
 	return true, nil
+}
+
+// copyCommandTemplates copies command templates from embedded FS to commands/
+func (uc *SetupUseCase) copyCommandTemplates(commandsDir string, noOverwrite bool) error {
+	// Read command templates from embedded FS
+	entries, err := fs.ReadDir(claudex.Profiles, "profiles/commands")
+	if err != nil {
+		return fmt.Errorf("could not read embedded commands directory: %w", err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() && !strings.HasPrefix(entry.Name(), ".") {
+			// Read from embedded FS
+			content, err := fs.ReadFile(claudex.Profiles, filepath.Join("profiles/commands", entry.Name()))
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: Failed to read embedded command %s: %v\n", entry.Name(), err)
+				continue
+			}
+
+			// Copy to commands/
+			commandTarget := filepath.Join(commandsDir, entry.Name())
+			if err := uc.writeFileIfNeeded(commandTarget, content, noOverwrite); err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: Failed to copy to commands/%s: %v\n", entry.Name(), err)
+			}
+		}
+	}
+
+	return nil
 }
 
 // copyAgentProfiles copies agent profiles from embedded FS to both agents/ and commands/agents/
