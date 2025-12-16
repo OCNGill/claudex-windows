@@ -2,6 +2,7 @@ package settings
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -452,6 +453,77 @@ func TestMergeSettings(t *testing.T) {
 				// Should have exactly 2 unique hooks
 				if len(commandCounts) != 2 {
 					t.Errorf("expected 2 unique hooks, got %d", len(commandCounts))
+				}
+			},
+		},
+		{
+			name:        "BasenameDedupe",
+			template:    templateJSON,
+			description: "same basename, different paths → deduplicated",
+			existing: []byte(`{
+  "permissions": {
+    "allow": [],
+    "deny": [],
+    "ask": []
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/absolute/path/.claude/hooks/post-tool-use.sh"
+          },
+          {
+            "type": "command",
+            "command": "/absolute/path/.claude/hooks/auto-doc-updater.sh"
+          }
+        ]
+      }
+    ]
+  }
+}`),
+			validate: func(t *testing.T, result []byte, err error) {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+
+				var resultSettings Settings
+				if err := json.Unmarshal(result, &resultSettings); err != nil {
+					t.Fatalf("failed to unmarshal result: %v", err)
+				}
+
+				// Count hooks by basename
+				postToolUse := resultSettings.Hooks["PostToolUse"]
+				basenameCount := make(map[string]int)
+
+				for _, entry := range postToolUse {
+					for _, hook := range entry.Hooks {
+						// Extract basename manually for comparison
+						parts := strings.Split(hook.Command, "/")
+						basename := parts[len(parts)-1]
+						basenameCount[basename]++
+					}
+				}
+
+				// Each basename should appear exactly once
+				for basename, count := range basenameCount {
+					if count != 1 {
+						t.Errorf("basename %s appears %d times, expected 1", basename, count)
+					}
+				}
+
+				// Should have exactly 2 unique basenames
+				if len(basenameCount) != 2 {
+					t.Errorf("expected 2 unique basenames, got %d", len(basenameCount))
+				}
+
+				// Should have post-tool-use.sh and auto-doc-updater.sh
+				if basenameCount["post-tool-use.sh"] != 1 {
+					t.Error("post-tool-use.sh not found or duplicated")
+				}
+				if basenameCount["auto-doc-updater.sh"] != 1 {
+					t.Error("auto-doc-updater.sh not found or duplicated")
 				}
 			},
 		},

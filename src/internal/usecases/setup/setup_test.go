@@ -1,6 +1,7 @@
 package setup
 
 import (
+	"strings"
 	"testing"
 
 	"claudex/internal/testutil"
@@ -387,6 +388,64 @@ func Test_Execute_GeneratesAbsoluteHookPaths(t *testing.T) {
 	content, err := afero.ReadFile(h.FS, "/project/.claude/settings.local.json")
 	require.NoError(t, err)
 	assert.NotContains(t, string(content), `".claude/hooks/`)
+}
+
+// Test_Execute_RunningTwiceDoesNotCorruptPaths verifies that running
+// setup multiple times does not create duplicate hooks or corrupted paths.
+func Test_Execute_RunningTwiceDoesNotCorruptPaths(t *testing.T) {
+	// Setup
+	h := testutil.NewTestHarness()
+	h.Env.Set("HOME", "/home/user")
+
+	// Create optional hooks config
+	h.SetupConfigDir("/home/user/.config/claudex", map[string]string{
+		"hooks/notification-hook.sh": "#!/bin/bash\necho notify",
+		"hooks/auto-doc-updater.sh":  "#!/bin/bash\necho doc",
+	})
+
+	// Create project
+	h.CreateDir("/project")
+	h.WriteFile("/project/package.json", `{"name": "test"}`)
+
+	// Create usecase
+	uc := New(h.FS, h.Env)
+
+	// Run setup first time
+	err := uc.Execute("/project", false)
+	require.NoError(t, err)
+
+	// Read settings after first run
+	firstRunContent, err := afero.ReadFile(h.FS, "/project/.claude/settings.local.json")
+	require.NoError(t, err)
+
+	// Verify first run has absolute paths
+	testutil.AssertFileContains(t, h.FS, "/project/.claude/settings.local.json", "/project/.claude/hooks/notification-hook.sh")
+	assert.NotContains(t, string(firstRunContent), `".claude/hooks/`)
+
+	// Run setup second time
+	err = uc.Execute("/project", false)
+	require.NoError(t, err)
+
+	// Read settings after second run
+	secondRunContent, err := afero.ReadFile(h.FS, "/project/.claude/settings.local.json")
+	require.NoError(t, err)
+
+	// Verify no corrupted paths like "/project/.claude/hooks//project/.claude/hooks/"
+	assert.NotContains(t, string(secondRunContent), "/project/.claude/hooks//project/.claude/hooks/")
+	assert.NotContains(t, string(secondRunContent), "//project/")
+
+	// Verify absolute paths are still present and correct
+	testutil.AssertFileContains(t, h.FS, "/project/.claude/settings.local.json", "/project/.claude/hooks/notification-hook.sh")
+	testutil.AssertFileContains(t, h.FS, "/project/.claude/settings.local.json", "/project/.claude/hooks/auto-doc-updater.sh")
+
+	// Verify no relative paths remain
+	assert.NotContains(t, string(secondRunContent), `".claude/hooks/`)
+
+	// Count occurrences of notification-hook.sh to ensure no duplicates
+	notificationCount := strings.Count(string(secondRunContent), "notification-hook.sh")
+	if notificationCount != 1 {
+		t.Errorf("expected notification-hook.sh to appear once, got %d occurrences", notificationCount)
+	}
 }
 
 // Test_Execute_MergesWithAbsolutePaths verifies that when merging settings,

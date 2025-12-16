@@ -204,8 +204,10 @@ func (uc *SetupUseCase) generateSettings(claudeDir string, _ bool) error {
 	}
 
 	// Replace relative hook paths with absolute paths
+	// Only match relative paths by including the opening quote to avoid
+	// replacing paths that are already absolute (e.g., "/Users/.../project/.claude/hooks/")
 	absHooksPath := filepath.Join(claudeDir, "hooks")
-	finalContent = []byte(strings.ReplaceAll(string(finalContent), ".claude/hooks/", absHooksPath+"/"))
+	finalContent = []byte(strings.ReplaceAll(string(finalContent), `".claude/hooks/`, `"`+absHooksPath+`/`))
 
 	return afero.WriteFile(uc.fs, settingsPath, finalContent, 0644)
 }

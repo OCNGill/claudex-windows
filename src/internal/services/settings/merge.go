@@ -3,6 +3,7 @@ package settings
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 )
 
 // MergeSettings performs a smart merge of template and existing settings.
@@ -55,19 +56,21 @@ func MergeSettings(template, existing []byte) ([]byte, error) {
 		// Get existing hook entries for this type (may be empty)
 		existingEntries := result.Hooks[hookType]
 
-		// Build set of existing command paths for this hook type
+		// Build set of existing command basenames for this hook type
+		// Use basename to deduplicate hooks regardless of path format
+		// (relative vs absolute paths should be treated as the same hook)
 		existingCommands := make(map[string]bool)
 		for _, entry := range existingEntries {
 			for _, hook := range entry.Hooks {
-				existingCommands[hook.Command] = true
+				existingCommands[filepath.Base(hook.Command)] = true
 			}
 		}
 
 		// Add missing hooks from template
 		for _, templateEntry := range templateEntries {
 			for _, templateHook := range templateEntry.Hooks {
-				// If this command path doesn't exist, add it
-				if !existingCommands[templateHook.Command] {
+				// If this command basename doesn't exist, add it
+				if !existingCommands[filepath.Base(templateHook.Command)] {
 					// Add to first entry if it exists, otherwise create new entry
 					if len(existingEntries) > 0 {
 						// Check if first entry has same matcher as template entry
@@ -92,7 +95,7 @@ func MergeSettings(template, existing []byte) ([]byte, error) {
 					}
 
 					// Mark as added to prevent duplicates in this merge
-					existingCommands[templateHook.Command] = true
+					existingCommands[filepath.Base(templateHook.Command)] = true
 				}
 			}
 		}
