@@ -1,0 +1,19 @@
+{
+  "name": "@claudex-windows/linux-arm64",
+  "version": "0.1.0",
+  "description": "claudex-windows binaries for Linux ARM64",
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "files": [
+    "bin/"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OCNGill/claudex-windows"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,39 @@
+{
+  "name": "@claudex-windows/cli",
+  "version": "0.1.0",
+  "description": "Claudex Windows - Session manager for Claude CLI with persistent sessions and agent orchestration",
+  "bin": {
+    "claudex-windows": "bin/claudex-windows",
+    "claudex-windows-hooks": "bin/claudex-windows-hooks"
+  },
+  "optionalDependencies": {
+    "@claudex-windows/darwin-arm64": "0.1.0",
+    "@claudex-windows/darwin-x64": "0.1.0",
+    "@claudex-windows/linux-x64": "0.1.0",
+    "@claudex-windows/linux-arm64": "0.1.0",
+    "@claudex-windows/windows-x64": "0.1.0"
+  },
+  "scripts": {
+    "postinstall": "node postinstall.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OCNGill/claudex-windows"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=14"
+  },
+  "keywords": [
+    "claude",
+    "ai",
+    "cli",
+    "session-manager",
+    "agent-orchestration",
+    "windows"
+  ],
+  "files": [
+    "bin/",
+    "postinstall.js"
+  ]
+}
