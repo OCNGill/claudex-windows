@@ -87,7 +87,7 @@ Error: Platform ${platformKey} is not supported.
 Supported platforms: ${supportedPlatforms}
 
 If you believe this platform should be supported, please file an issue at:
-https://github.com/maikel/claudex/issues
+https://github.com/OCNGill/claudex-windows/issues
 `);
     process.exit(1);
   }

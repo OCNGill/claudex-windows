@@ -1,6 +1,6 @@
 # Contributing to Claudex
 
-Thank you for your interest in contributing to Claudex! This document provides guidelines for contributing to the project.
+Thank you for your interest in contributing to Claudex-Windows! This document provides guidelines for contributing to the project.
 
 ## Reporting Bugs
 
@@ -55,8 +55,8 @@ Feature suggestions are welcome! Please:
 
 ```bash
 # Clone your fork
-git clone https://github.com/YOUR_USERNAME/claudex.git
-cd claudex
+git clone https://github.com/YOUR_USERNAME/claudex-windows.git
+cd claudex-windows
 
 # Install dependencies
 go mod download
@@ -65,11 +65,11 @@ go mod download
 go test ./...
 
 # Build the binary
-go build -o claudex ./cmd/claudex
+go build -o claudex-windows ./cmd/claudex-windows
 ```
 
 ## Questions?
 
 If you have questions about contributing, feel free to open an issue for discussion.
 
-Thank you for contributing to Claudex!
+Thank you for contributing to Claudex-Windows!

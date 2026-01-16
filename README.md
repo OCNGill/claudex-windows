@@ -147,8 +147,8 @@ This works on macOS and Linux without needing to clone the repository.
 ### From Source
 
 ```bash
-git clone https://github.com/mgonzalezbaile/claudex.git
-cd claudex
+git clone https://github.com/OCNGill/claudex-windows.git
+cd claudex-windows
 make install
 ```
 
